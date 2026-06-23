@@ -1,4 +1,4 @@
----
+﻿---
 title: USENIX Security 2024 论文 Prompt Injection 复现报告
 published: 2024-05-20
 description: 基于本地 Windows 11 + DeepSeek 环境，全矩阵复现大模型提示词注入攻击与防御核心实验。
@@ -83,7 +83,7 @@ Open-Prompt-Injection/
 
 ### 5.1 攻击实验对比 (Attack Evaluation)
 
-![](C:\Users\primer\Desktop\blog\src\content\posts\论文复现1\attack_results.png)
+![](./attack_results.png)
 
 *   **复现数据**：
     *   **Naive / Escape / Ignore**：MR（攻击匹配率）极低，PNA-T（目标任务保留率）保持在 95% 以上，目标任务未受实质性影响。
@@ -94,7 +94,7 @@ Open-Prompt-Injection/
 
 ### 5.2 防御实验对比 (Defense Evaluation)
 
-![](C:\Users\primer\Desktop\blog\src\content\posts\论文复现1\defense_results.png)
+![](./defense_results.png)
 
 在最强的 Combine 攻击下测试防御机制：
 *   **复现数据**：
@@ -157,5 +157,5 @@ python 绘图.py
 
 本次复现不仅提供了一套在 Windows 系统上可落地的实验框架，降低了安全研究的门槛，同时通过详实的数据再次验证了：对抗 Prompt Injection 没有简单的“银弹”。只有深刻理解其本质规律，才能在未来的大模型安全对抗中占据主动。
 
-[复现项目地址]: https://github.com/chinaz-max/Open-Prompt-Injection-Reproduction
+复现项目地址已开源至：https://github.com/chinaz-max/Open-Prompt-Injection-Reproduction
 
