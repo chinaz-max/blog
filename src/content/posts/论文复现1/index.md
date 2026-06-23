@@ -1,6 +1,6 @@
 ﻿---
 title: USENIX Security 2024 论文 Prompt Injection 复现报告
-published: 2024-05-20
+published: 2026-06-23
 description: 基于本地 Windows 11 + DeepSeek 环境，全矩阵复现大模型提示词注入攻击与防御核心实验。
 image: ./cover.jpg
 tags: [Prompt Injection, LLM Security, Paper Reproduction, DeepSeek]
