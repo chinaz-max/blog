@@ -164,4 +164,4 @@ python src\04_visualize_results.py
 * DataSentinel 对抗训练框架的价值得到间接印证——正是因为 vanilla KAD 不够好，才需要更强大的方法
 * 只有 Combine 组合攻击能在一定程度上穿透现代模型防御 (74% 检出率)
 
-复现项目代码与数据路径：`C:\Users\primer\Desktop\DataSentinel_Replication`
+复现项目代码与数据路径：`https://github.com/chinaz-max/DataSentinel-Replication`
