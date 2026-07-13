@@ -2,7 +2,7 @@
 title: IEEE S&P 2025 论文 DataSentinel 复现报告
 published: 2026-07-13
 description: 基于本地 Windows + DeepSeek API 复现 DataSentinel 提示注入攻击 KAD 检测评估实验
-image: ./final_comparison.png
+image: ./cover.jpg
 tags: [Prompt Injection, KAD Detection, LLM Security, Paper Reproduction, DeepSeek, DataSentinel]
 category: AI Security
 draft: false
