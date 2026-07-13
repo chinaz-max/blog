@@ -3,7 +3,7 @@ title: IEEE S&P 2025 论文 DataSentinel 复现报告
 published: 2026-07-13
 description: 基于本地 Windows + DeepSeek API 复现 DataSentinel 提示注入攻击 KAD 检测评估实验
 image: ./cover.jpg
-tags: [Prompt Injection, KAD Detection, LLM Security, Paper Reproduction, DeepSeek, DataSentinel]
+tags: [提示词注入攻击, KAD检测, 大语言模型安全,论文复现, DeepSeek, DataSentinel]
 category: AI Security
 draft: false
 ---
@@ -89,7 +89,7 @@ DataSentinel_Replication/
 
 FNR 各攻击类型详情图
 
-![](.\fnr_detailed.png)
+![](./fnr_detailed.png)
 
 | 指标 | DeepSeek-chat (本次复现) | Mistral-7B (论文基线) |
 |------|:----------------------:|:--------------------:|
@@ -122,7 +122,7 @@ FNR 各攻击类型详情图
 
 检测结果汇总如下图
 
-![](.\detection_summary_deepseek.png)
+![](./detection_summary_deepseek.png)
 
 ## 6. 快速启动指南 (Quick Start)
 
