@@ -2,7 +2,7 @@
 title: DeerFlow 本地部署与进阶使用指南：从 Docker 启动到 Super Agent 原理
 published: 2026-08-11
 description: 在 Windows + Docker Desktop 环境中部署 DeerFlow，配置 OpenAI 兼容模型，并掌握基础使用、Skills、MCP、子代理、记忆与运维方法
-tags: [DeerFlow, AI Agent, Docker, 大语言模型, 本地部署]
+tags: [DeerFlow,大语言模型, 本地部署]
 image: ./cover.jpg
 category: AI Agents
 draft: false
