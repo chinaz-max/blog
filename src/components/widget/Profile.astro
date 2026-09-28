@@ -5,8 +5,12 @@ import { url } from "../../utils/url-utils";
 import ImageWrapper from "../misc/ImageWrapper.astro";
 
 const config = profileConfig;
+const contacts = [
+    { name: "QQ", icon: "fa6-brands:qq", account: config.contacts?.qq, hint: "在 QQ 中搜索号码添加好友" },
+    { name: "微信", icon: "fa6-brands:weixin", account: config.contacts?.wechat, hint: "在微信中选择「添加朋友」，搜索微信号" },
+].filter(contact => contact.account);
 ---
-<div class="card-base p-3">
+<div class="card-base p-3 !overflow-visible">
     <a aria-label="Go to About Page" href={url('/about/')}
        class="group block relative mx-auto mt-1 lg:mx-0 lg:mt-0 mb-3
        max-w-[12rem] lg:max-w-none overflow-hidden rounded-xl active:scale-95">
@@ -22,7 +26,7 @@ const config = profileConfig;
         <div class="font-bold text-xl text-center mb-1 dark:text-neutral-50 transition">{config.name}</div>
         <div class="h-1 w-5 bg-[var(--primary)] mx-auto rounded-full mb-2 transition"></div>
         <div class="text-center text-neutral-400 mb-2.5 transition">{config.bio}</div>
-        <div class="flex flex-wrap gap-2 justify-center mb-1">
+        <div class="profile-social flex flex-wrap gap-2 justify-center mb-1">
             {config.links.length > 1 && config.links.map(item =>
                     <a rel="me" aria-label={item.name} href={item.url} target="_blank" class="btn-regular rounded-lg h-10 w-10 active:scale-90">
                         <Icon name={item.icon} class="text-[1.5rem]"></Icon>
@@ -33,7 +37,64 @@ const config = profileConfig;
                 <Icon name={config.links[0].icon} class="text-[1.5rem]"></Icon>
                 {config.links[0].name}
             </a>}
+            {contacts.map(contact => <details class="contact-details">
+                <summary aria-label={`${contact.name} 联系方式`} title={`${contact.name} 联系方式`}
+                    class="btn-regular rounded-lg h-10 w-10 active:scale-90">
+                    <Icon name={contact.icon} class="text-[1.5rem]" />
+                </summary>
+                <div class="contact-panel" role="group" aria-label={`${contact.name} 账号`}>
+                    <strong>{contact.name === "QQ" ? "QQ 号" : "微信号"}</strong>
+                    <div class="contact-account">{contact.account}</div>
+                    <p>{contact.hint}</p>
+                    <button type="button" class="btn-regular rounded-lg h-9 px-3" data-copy-contact={contact.account} aria-live="polite">复制账号</button>
+                </div>
+            </details>)}
         </div>
     </div>
 </div>
+
+<style>
+    .profile-social { position: relative; }
+    .contact-details summary { list-style: none; cursor: pointer; }
+    .contact-details summary::-webkit-details-marker { display: none; }
+    .contact-details summary:focus-visible, .contact-panel button:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+    .contact-details[open] summary { background: var(--btn-regular-bg-hover); }
+    .contact-panel {
+        position: absolute; z-index: 60; top: calc(100% + 12px); left: 50%; transform: translateX(-50%);
+        width: 250px; max-width: calc(100vw - 40px); padding: 18px; border-radius: 12px;
+        background: var(--card-bg); color: var(--btn-content); text-align: center;
+        border: 1px solid var(--btn-regular-bg-hover); box-shadow: 0 8px 28px rgb(0 0 0 / .12);
+    }
+    .contact-panel strong { font-size: 14px; }
+    .contact-account { margin: 10px 0; font-size: 20px; font-weight: 600; letter-spacing: .03em; user-select: all; }
+    .contact-panel p { font-size: 12px; line-height: 1.7; margin-bottom: 14px; }
+    .contact-panel button { margin: 0 auto; font-size: 13px; }
+</style>
+
+<script>
+    document.addEventListener("click", async (event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+        const current = target.closest(".contact-details");
+        document.querySelectorAll<HTMLDetailsElement>(".contact-details[open]").forEach(details => {
+            if (details !== current) details.open = false;
+        });
+        const button = target.closest<HTMLButtonElement>("[data-copy-contact]");
+        if (!button?.dataset.copyContact) return;
+        try {
+            await navigator.clipboard.writeText(button.dataset.copyContact);
+            button.textContent = "已复制";
+        } catch {
+            button.textContent = "请选中上方账号复制";
+        }
+        window.setTimeout(() => { button.textContent = "复制账号"; }, 2000);
+    });
+    document.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape") return;
+        document.querySelectorAll<HTMLDetailsElement>(".contact-details[open]").forEach(details => {
+            details.open = false;
+            details.querySelector<HTMLElement>("summary")?.focus();
+        });
+    });
+</script>
 

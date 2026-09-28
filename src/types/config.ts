@@ -64,6 +64,10 @@ export type ProfileConfig = {
 	avatar?: string;
 	name: string;
 	bio?: string;
+	contacts?: {
+		qq?: string;
+		wechat?: string;
+	};
 	links: {
 		name: string;
 		url: string;

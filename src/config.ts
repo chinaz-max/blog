@@ -56,6 +56,10 @@ export const profileConfig: ProfileConfig = {
 	avatar: "assets/images/logo.png", // Relative to the /src directory. Relative to the /public directory if it starts with '/'
 	name: "初樽",
 	bio: "山不让尘，川不辞盈",
+	contacts: {
+		qq: "3034772563",
+		wechat: "Cam3l1ia",
+	},
 	links: [
 		{
 			name: "GitHub",
