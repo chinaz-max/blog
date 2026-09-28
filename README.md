@@ -85,6 +85,8 @@
  ```
  
  项目已配置 [GitHub Pages 自动部署](.github/workflows/deploy.yml)，推送 `main` 分支即可自动构建并发布。
+
+ Windows 下使用 `deploy.bat` 上传，或遇到代理端口、Token、403 等问题时，请阅读 [博客上传与代理端口排障指南](README.upload.md)。
  
  ## 命令参考
  
