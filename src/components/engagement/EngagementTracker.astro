@@ -1,0 +1,190 @@
+---
+const site = Astro.site!.origin;
+---
+<div id="engagement-config" data-site={site} data-likes-api="https://applause.chabouis.fr" hidden></div>
+
+<script>
+    import { applauseKey, canonicalPage, isLiveSite, likeStorageKey, parseCounter, parseViews } from "../../utils/engagement";
+
+    const config = document.getElementById("engagement-config")!;
+    const site = config.dataset.site!;
+    const api = config.dataset.likesApi!;
+    const live = isLiveSite(location.href, site);
+    const format = (count: number | undefined) => count === undefined ? "—" : count.toLocaleString("zh-CN");
+    type LikeState = { count?: number; loading: boolean; busy: boolean; liked: boolean; message: string };
+    const likes = new Map<string, LikeState>();
+    const memoryLikes = new Set<string>();
+    let route = "";
+    let activePost = "";
+    let generation = 0;
+    let viewRequest: AbortController | undefined;
+    let viewState: "loading" | "ready" | "error" | "preview" = "loading";
+    let views: { site: number; page: number } | undefined;
+
+    function hasLiked(key: string) {
+        if (memoryLikes.has(key)) return true;
+        if (!live) return false;
+        try { return localStorage.getItem(likeStorageKey(key)) === "1"; } catch { return false; }
+    }
+
+    function rememberLike(key: string) {
+        memoryLikes.add(key);
+        if (!live) return;
+        try { localStorage.setItem(likeStorageKey(key), "1"); } catch { /* The current tab still prevents repeat likes. */ }
+    }
+
+    function setText(selector: string, value: string) {
+        document.querySelectorAll<HTMLElement>(selector).forEach(node => {
+            if (node.textContent !== value) node.textContent = value;
+        });
+    }
+
+    function render() {
+        setText("[data-site-views]", format(views?.site));
+        setText("[data-page-views]", format(views?.page));
+        setText("[data-site-views-note]", !live ? "本地预览，不计入线上统计" : viewState === "error" ? "统计暂不可用" : viewState === "loading" ? "统计加载中" : "");
+        const post = document.querySelector<HTMLElement>("[data-post-engagement]");
+        const state = likes.get(activePost);
+        if (!post || !state) return;
+        const button = post.querySelector<HTMLButtonElement>("[data-like-button]")!;
+        state.liked = hasLiked(activePost);
+        button.disabled = state.loading || state.busy || state.liked;
+        button.setAttribute("aria-pressed", String(state.liked));
+        button.setAttribute("aria-label", state.liked ? "你已为这篇文章点赞" : state.busy ? "正在提交点赞" : "为这篇文章点赞");
+        setText("[data-like-count]", format(state.count));
+        setText("[data-like-label]", state.liked ? "已点赞" : state.busy ? "提交中" : "点赞");
+        const note = !live ? "本地演示，点赞不计入线上数据" : state.message || (viewState === "error" ? "浏览统计暂不可用" : state.liked ? "谢谢你的支持" : "");
+        setText("[data-engagement-note]", note);
+    }
+
+    // One JSONP request records one real navigation and provides both site and page totals.
+    // The per-request referrer policy is required by Busuanzi to distinguish article paths.
+    function fetchViews(signal: AbortSignal): Promise<{ site: number; page: number }> {
+        return new Promise((resolve, reject) => {
+            const callback = `__ctfer_views_${crypto.randomUUID().replaceAll("-", "")}`;
+            const host = window as unknown as Record<string, (value: unknown) => void>;
+            const script = document.createElement("script");
+            let finished = false;
+            const timeout = setTimeout(() => finish(new Error("Views timed out")), 12_000);
+            const abort = () => finish(new DOMException("Navigation changed", "AbortError"));
+            function finish(error?: Error, value?: { site: number; page: number }) {
+                if (finished) return;
+                finished = true;
+                clearTimeout(timeout);
+                signal.removeEventListener("abort", abort);
+                script.remove();
+                // A late JSONP response must never update a different article.
+                host[callback] = () => {};
+                setTimeout(() => { delete host[callback]; }, 60_000);
+                if (error) reject(error); else resolve(value!);
+            }
+            host[callback] = value => {
+                try { finish(undefined, parseViews(value)); } catch { finish(new Error("Invalid views response")); }
+            };
+            script.src = `https://busuanzi.ibruce.info/busuanzi?jsonpCallback=${callback}`;
+            script.referrerPolicy = "no-referrer-when-downgrade";
+            script.async = true;
+            script.onerror = () => finish(new Error("Views unavailable"));
+            signal.addEventListener("abort", abort, { once: true });
+            if (signal.aborted) abort(); else document.head.append(script);
+        });
+    }
+
+    async function readLikes(key: string) {
+        const url = new URL(`${api}/get-claps`);
+        url.searchParams.set("url", applauseKey(key));
+        const response = await fetch(url, { credentials: "omit", cache: "no-store", referrerPolicy: "origin", signal: AbortSignal.timeout(12_000) });
+        if (!response.ok) throw new Error("Likes unavailable");
+        return parseCounter(await response.text());
+    }
+
+    async function submitLike(key: string, state: LikeState) {
+        if (state.busy || state.loading || hasLiked(key)) return;
+        state.busy = true;
+        state.message = "";
+        render();
+        try {
+            if (live) {
+                const url = new URL(`${api}/update-claps`);
+                url.searchParams.set("url", applauseKey(key));
+                const response = await fetch(url, {
+                    method: "POST", headers: { "Content-Type": "text/plain" },
+                    body: JSON.stringify("1,ctfer-blog/1.0"), credentials: "omit", referrerPolicy: "origin",
+                    signal: AbortSignal.timeout(12_000),
+                });
+                if (!response.ok) throw new Error("Like not confirmed");
+                state.count = parseCounter(await response.text());
+            } else {
+                state.count = (state.count ?? 0) + 1;
+            }
+            rememberLike(key);
+        } catch {
+            state.message = "暂时无法确认点赞，请稍后再试";
+        } finally {
+            state.busy = false;
+            render();
+        }
+    }
+
+    function activate() {
+        const nextRoute = location.pathname + location.search;
+        if (nextRoute === route) { render(); return; }
+        route = nextRoute;
+        const version = ++generation;
+        viewRequest?.abort();
+        viewRequest = new AbortController();
+        activePost = document.querySelector<HTMLElement>("[data-post-engagement]")?.dataset.canonical || "";
+        views = live ? undefined : { site: 0, page: 0 };
+        viewState = live ? "loading" : "preview";
+        if (activePost) {
+            const key = canonicalPage(activePost, site);
+            activePost = key;
+            const previous = likes.get(key);
+            const state: LikeState = previous || { count: live ? undefined : 0, loading: live, busy: false, liked: hasLiked(key), message: "" };
+            likes.set(key, state);
+            if (live && !state.busy) {
+                state.loading = true;
+                state.message = "";
+                void readLikes(key).then(count => { state.count = Math.max(count, state.count ?? 0); }).catch(() => {
+                    state.message = "点赞数暂不可用";
+                }).finally(() => { state.loading = false; render(); });
+            }
+        }
+        render();
+        if (!live) return;
+        void fetchViews(viewRequest.signal).then(result => {
+            if (version !== generation) return;
+            views = result;
+            viewState = "ready";
+            render();
+        }).catch(() => {
+            if (version !== generation) return;
+            viewState = "error";
+            render();
+        });
+    }
+
+    document.addEventListener("click", event => {
+        const target = event.target;
+        if (!(target instanceof Element) || !target.closest("[data-like-button]")) return;
+        const key = activePost;
+        const state = likes.get(key);
+        if (!key || !state) return;
+        // Serialize confirmed likes across tabs where the browser supports Web Locks.
+        if (navigator.locks) void navigator.locks.request(likeStorageKey(key), () => submitLike(key, state));
+        else void submitLike(key, state);
+    });
+    window.addEventListener("storage", event => {
+        if (event.key?.startsWith("ctfer:liked:v1:")) render();
+    });
+
+    let hooked = false;
+    function setupNavigation() {
+        if (hooked || !window.swup?.hooks) return;
+        hooked = true;
+        window.swup.hooks.on("page:view", activate);
+    }
+    setupNavigation();
+    document.addEventListener("swup:enable", setupNavigation);
+    activate();
+</script>

@@ -1,0 +1,61 @@
+---
+import { Icon } from "astro-icon/components";
+import { canonicalPage } from "../../utils/engagement";
+
+interface Props { path: string; }
+const canonical = canonicalPage(Astro.props.path, Astro.site!.href);
+---
+<section class="post-engagement" data-post-engagement data-canonical={canonical} aria-label="文章浏览与点赞" data-pagefind-ignore>
+    <div class="engagement-main">
+        <div class="engagement-copy">
+            <strong>感谢读到这里</strong>
+            <p>如果这篇文章对你有帮助，点个赞吧。</p>
+        </div>
+        <button type="button" class="like-button" data-like-button disabled aria-pressed="false" aria-label="为这篇文章点赞">
+            <Icon class="like-outline" name="material-symbols:favorite-outline-rounded" aria-hidden="true" />
+            <Icon class="like-filled" name="material-symbols:favorite-rounded" aria-hidden="true" />
+            <span data-like-label>点赞</span>
+            <span class="like-divider" aria-hidden="true"></span>
+            <strong data-like-count>—</strong>
+        </button>
+    </div>
+    <div class="engagement-meta">
+        <span class="article-views" title="本文页面浏览次数，每次打开文章会计入统计">
+            <Icon name="material-symbols:visibility-outline-rounded" aria-hidden="true" />
+            本文浏览 <strong data-page-views>—</strong> 次
+        </span>
+        <span class="engagement-note" data-engagement-note role="status">统计加载中</span>
+    </div>
+    <noscript><p class="engagement-note">启用 JavaScript 后可查看浏览量并点赞。</p></noscript>
+</section>
+
+<style>
+    .post-engagement { margin: 26px 0; padding: 22px 0 18px; border-top: 1px dashed var(--line-divider); border-bottom: 1px dashed var(--line-divider); }
+    .engagement-main { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    .engagement-copy strong { color: #626b78; font-size: 14px; font-weight: 600; }
+    .engagement-copy p { margin: 5px 0 0; color: #9aa1ab; font-size: 12px; }
+    .like-button { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; gap: 8px; min-height: 44px; min-width: 118px; padding: 0 15px; border-radius: 12px; background: var(--btn-regular-bg); color: var(--btn-content); font-size: 13px; transition: background .2s, transform .2s; }
+    .like-button :global(svg) { height: 19px; width: 19px; }
+    .like-button .like-filled { display: none; }
+    .like-button[aria-pressed="true"] .like-outline { display: none; }
+    .like-button[aria-pressed="true"] .like-filled { display: block; }
+    .like-button:hover:not(:disabled) { background: var(--btn-regular-bg-hover); }
+    .like-button:active:not(:disabled) { transform: scale(.96); }
+    .like-button:disabled { cursor: default; }
+    .like-button:disabled[aria-pressed="false"] { opacity: .65; }
+    .like-button:focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; }
+    .like-button strong { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .like-divider { width: 1px; height: 14px; background: currentColor; opacity: .2; margin: 0 1px; }
+    .engagement-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 16px; margin-top: 14px; }
+    .article-views { display: inline-flex; align-items: center; gap: 5px; color: #9aa1ab; font-size: 11px; }
+    .article-views :global(svg) { width: 15px; height: 15px; }
+    .article-views strong { font-weight: 500; font-variant-numeric: tabular-nums; }
+    .engagement-note { color: #a1a8b2; font-size: 11px; line-height: 1.7; }
+    :global(.dark) .engagement-copy strong { color: #c0c8d5; }
+    :global(.dark) .engagement-copy p, :global(.dark) .engagement-note, :global(.dark) .article-views { color: #939ead; }
+    @media (max-width: 480px) {
+        .engagement-main { align-items: flex-start; flex-direction: column; gap: 14px; }
+        .like-button { min-width: 130px; }
+    }
+    @media (prefers-reduced-motion: reduce) { .like-button { transition: none; } }
+</style>

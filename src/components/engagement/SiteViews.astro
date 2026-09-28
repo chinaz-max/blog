@@ -1,0 +1,23 @@
+---
+import { Icon } from "astro-icon/components";
+---
+<div class="site-views" data-site-statistics data-pagefind-ignore>
+    <span class="site-views-count" title="全站页面浏览次数，由不蒜子统计">
+        <Icon name="material-symbols:visibility-outline-rounded" aria-hidden="true" />
+        <span>本站总浏览量</span>
+        <strong data-site-views aria-label="全站浏览次数">—</strong>
+        <span>次</span>
+    </span>
+    <small data-site-views-note>统计加载中</small>
+    <noscript><small>启用 JavaScript 后可查看统计</small></noscript>
+</div>
+
+<style>
+    .site-views { display: flex; flex-direction: column; align-items: center; gap: 3px; margin-bottom: 14px; color: #9298a1; font-size: 12px; }
+    .site-views-count { display: inline-flex; gap: 6px; align-items: center; }
+    .site-views-count :global(svg) { width: 17px; height: 17px; color: var(--primary); }
+    .site-views strong { font-variant-numeric: tabular-nums; color: var(--btn-content); font-weight: 600; }
+    .site-views small { font-size: 10px; color: #9da3ab; }
+    .site-views small:empty { display: none; }
+    :global(.dark) .site-views { color: #929cab; }
+</style>
