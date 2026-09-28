@@ -1,0 +1,316 @@
+---
+import seed from "../../../public/data/ai-radar.json";
+import { beijingTime, calendarDays, getSignal, record, sourceLink, text, type RadarSnapshot } from "../../utils/ai-radar";
+
+const snapshot = seed as RadarSnapshot;
+const signal = getSignal(snapshot);
+const latest = record(record(record(snapshot.status?.payload).data).latest_reset);
+const calendar = calendarDays(snapshot.history);
+const releases = [
+    { key: "codex" as const, name: "Codex", icon: "C", fallback: "https://github.com/openai/codex/releases" },
+    { key: "claude" as const, name: "Claude Code", icon: "✳", fallback: "https://github.com/anthropics/claude-code/releases" },
+];
+---
+
+<aside class="radar-rail" aria-label="AI 动态">
+    <ai-radar data-seed={JSON.stringify(snapshot)}>
+        <details class="radar-shell">
+            <summary class="radar-heading">
+                <span class="radar-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8"/><path d="M12 4v8l5 5M8 12a4 4 0 0 0 4 4"/><circle cx="17.5" cy="6.5" r="2" class="radar-dot"/></svg></span>
+                <span class="radar-heading-text"><strong>AI 动态</strong><small>Tibo · 工具更新</small></span>
+                <span class="radar-chevron" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="radar-body">
+                <div class="radar-section-label"><span>CODEX 重置观察</span><a href="https://x.com/thsottiaux" target="_blank" rel="noopener noreferrer">@Tibo ↗</a></div>
+                <section class="radar-signal" data-kind={signal.kind} aria-label="下一次重置动态">
+                    <span class="radar-status" data-field="signal-label">{signal.label}</span>
+                    <h2 data-field="signal-title">{signal.title}</h2>
+                    <p data-field="signal-description">{signal.description}</p>
+                    <div class="radar-window" data-field="signal-window" hidden={!signal.until}>
+                        <span data-field="window-label">{signal.kind === "prediction" ? "观察截止 · 非重置时间" : "预告参考时间 · 北京时间"}</span>
+                        <strong data-field="window-time">{beijingTime(signal.until)}</strong>
+                    </div>
+                    <details class="radar-evidence" data-field="evidence" hidden={!signal.evidence}>
+                        <summary>查看判断依据 <span aria-hidden="true">＋</span></summary>
+                        <p data-field="evidence-text">{signal.evidence}</p>
+                        <a data-field="evidence-link" href={signal.link || undefined} hidden={!signal.link} target="_blank" rel="noopener noreferrer">查看原始来源 ↗</a>
+                    </details>
+                </section>
+
+                <div class="radar-latest">
+                    <div><span>最近一次公告</span><strong data-field="latest-time">{beijingTime(latest.announced_at)}</strong></div>
+                    <a data-field="latest-link" href={sourceLink(record(latest.source).url) || undefined} target="_blank" rel="noopener noreferrer">{latest.reset_type === "banked" ? "备用额度 ↗" : "常规重置 ↗"}</a>
+                </div>
+
+                <section class="radar-calendar" aria-label="近 28 天的重置公告记录">
+                    <div class="radar-section-label"><span>近 28 天 · 公告记录</span><span>北京时间</span></div>
+                    <div class="radar-days">{calendar.map(day => <a class="radar-day" data-type={day.type} href={day.link || undefined} title={`${day.date} · ${day.count ? `${day.count} 条公告` : "未收录公告"}`} aria-label={`${day.date} · ${day.count ? `${day.count} 条公告` : "未收录公告"}`} target="_blank" rel="noopener noreferrer"><span>{day.date.slice(8)}</span></a>)}</div>
+                    <div class="radar-legend"><span><i data-type="regular"></i>常规</span><span><i data-type="banked"></i>备用</span><span><i data-type="none"></i>未收录</span></div>
+                    <p class="radar-cache-note" data-field="history-note"></p>
+                </section>
+
+                <section class="radar-releases" aria-label="近期 AI 工具更新">
+                    <div class="radar-section-label"><span>近期 AI 工具更新</span><span>稳定版</span></div>
+                    {releases.map(release => {
+                        const data = record(snapshot[release.key]?.payload);
+                        return <a class="radar-release" data-release={release.key} href={sourceLink(data.html_url) || release.fallback} target="_blank" rel="noopener noreferrer">
+                            <span class="radar-app-icon" aria-hidden="true">{release.icon}</span>
+                            <span class="radar-release-copy"><strong>{release.name}</strong><span data-release-version>{text(data.tag_name).replace(/^rust-/, "") || "查看官方版本"}</span></span>
+                            <span class="radar-release-date" data-release-date>{data.published_at ? beijingTime(data.published_at).split(" ")[0] : "↗"}</span>
+                        </a>;
+                    })}
+                    <p class="radar-cache-note" data-field="release-note"></p>
+                </section>
+
+                <div class="radar-refresh-row"><span data-field="refresh-state" role="status">打开页面后自动检查</span><button type="button" class="radar-refresh" aria-label="刷新 AI 动态" title="刷新 AI 动态"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M20 10a8 8 0 1 0-1.4 6M20 4v6h-6"/></svg></button></div>
+                <p class="radar-updated" data-field="updated">{snapshot.status ? `重置数据检查于 ${beijingTime(snapshot.status.fetchedAt, true)}` : "正在等待数据"}</p>
+                <footer class="radar-footer">
+                    <p>社区信息，不代表官方承诺或个人额度。</p>
+                    <p>数据 <a href="https://codex-resets.com/" target="_blank" rel="noopener noreferrer">Codex Resets ↗</a> · GitHub</p>
+                    <p>灵感来自 <a href="https://codex-reset.top/" target="_blank" rel="noopener noreferrer">Tibo 重置助手 ↗</a></p>
+                </footer>
+            </div>
+        </details>
+    </ai-radar>
+</aside>
+
+<script>
+    import { SOURCES, beijingTime, calendarDays, fresh, getSignal, normalizePayload, record, sourceLink, text, timestamp, type DatasetKey, type RadarSnapshot } from "../../utils/ai-radar";
+
+    const CACHE_KEY = "chuzun-ai-radar-v1";
+    const POLL = 5 * 60_000;
+    const RELEASE_POLL = 30 * 60_000;
+    const keys = Object.keys(SOURCES) as DatasetKey[];
+
+    class AIRadar extends HTMLElement {
+        private snapshot: RadarSnapshot = { version: 1 };
+        private life?: AbortController;
+        private timer?: ReturnType<typeof setInterval>;
+        private frame = 0;
+        private busy = false;
+        private lastAttempt = 0;
+        private lastManual = 0;
+        private failed = false;
+
+        connectedCallback() {
+            this.life = new AbortController();
+            this.frame = requestAnimationFrame(() => this.init());
+        }
+
+        disconnectedCallback() {
+            cancelAnimationFrame(this.frame);
+            clearInterval(this.timer);
+            this.life?.abort();
+            this.busy = false;
+        }
+
+        private merge(value: unknown) {
+            const incoming = record(value);
+            if (incoming.version !== 1) return;
+            for (const key of keys) {
+                const data = record(incoming[key]);
+                if (!Number.isFinite(timestamp(data.fetchedAt)) || timestamp(data.fetchedAt) > Date.now() + 60_000) continue;
+                if (this.snapshot[key] && timestamp(this.snapshot[key]!.fetchedAt) >= timestamp(data.fetchedAt)) continue;
+                try { this.snapshot[key] = { fetchedAt: text(data.fetchedAt), payload: normalizePayload(key, data.payload) }; } catch { /* Skip an invalid cache entry. */ }
+            }
+        }
+
+        private init() {
+            try { this.merge(JSON.parse(this.dataset.seed || "{}")); } catch { /* The live fetch can recover. */ }
+            try { this.merge(JSON.parse(localStorage.getItem(CACHE_KEY) || "{}")); } catch { /* Storage is optional. */ }
+            const media = matchMedia("(min-width: 1760px)");
+            const setExpanded = () => { this.querySelector<HTMLDetailsElement>(".radar-shell")!.open = media.matches; };
+            setExpanded();
+            media.addEventListener("change", setExpanded, { signal: this.life!.signal });
+            this.querySelector<HTMLButtonElement>(".radar-refresh")!.addEventListener("click", () => {
+                if (this.busy || Date.now() - this.lastManual < 60_000) return;
+                this.lastManual = Date.now();
+                void this.refresh(true);
+            }, { signal: this.life!.signal });
+            document.addEventListener("visibilitychange", () => {
+                if (!document.hidden && Date.now() - this.lastAttempt >= POLL) void this.refresh();
+            }, { signal: this.life!.signal });
+            this.render();
+            void this.refresh();
+            this.timer = setInterval(() => {
+                if (document.hidden) return;
+                this.render();
+                if (Date.now() - this.lastAttempt >= POLL) void this.refresh();
+            }, 60_000);
+        }
+
+        private field(name: string) { return this.querySelector<HTMLElement>(`[data-field="${name}"]`)!; }
+        private write(name: string, value: string) {
+            const field = this.field(name);
+            if (field.textContent !== value) field.textContent = value;
+        }
+        private link(name: string, href: string | null) {
+            const node = this.field(name);
+            if (href) node.setAttribute("href", href); else node.removeAttribute("href");
+            node.hidden = !href;
+        }
+
+        private async refresh(force = false) {
+            if (this.busy || !this.life || this.life.signal.aborted || document.hidden) return;
+            const now = Date.now();
+            const due = keys.filter(key => force || !fresh(this.snapshot[key], now, key === "codex" || key === "claude" ? RELEASE_POLL : POLL));
+            this.lastAttempt = now;
+            if (!due.length) return;
+            this.busy = true;
+            this.failed = false;
+            this.render();
+            const lifecycle = this.life.signal;
+            const results = await Promise.allSettled(due.map(async key => {
+                const response = await fetch(SOURCES[key], { signal: AbortSignal.any([lifecycle, AbortSignal.timeout(12_000)]), credentials: "omit", cache: "no-store" });
+                if (!response.ok) throw new Error(`Source returned ${response.status}`);
+                const payload = normalizePayload(key, await response.json());
+                return { key, value: { fetchedAt: new Date().toISOString(), payload } };
+            }));
+            if (lifecycle.aborted) return;
+            for (const result of results) {
+                if (result.status === "fulfilled") this.snapshot[result.value.key] = result.value.value;
+                else this.failed = true;
+            }
+            try { localStorage.setItem(CACHE_KEY, JSON.stringify(this.snapshot)); } catch { /* Live rendering does not require storage. */ }
+            this.busy = false;
+            this.render();
+        }
+
+        private render() {
+            const now = Date.now();
+            const signal = getSignal(this.snapshot, now);
+            this.querySelector<HTMLElement>(".radar-signal")!.dataset.kind = signal.kind;
+            this.write("signal-label", signal.label);
+            this.write("signal-title", signal.title);
+            this.write("signal-description", signal.description);
+            this.field("signal-window").hidden = !signal.until;
+            this.write("window-label", signal.kind === "prediction" ? "观察截止 · 非重置时间" : "预告参考时间 · 北京时间");
+            this.write("window-time", beijingTime(signal.until));
+            this.field("evidence").hidden = !signal.evidence;
+            this.write("evidence-text", signal.evidence);
+            this.link("evidence-link", signal.link);
+            const latest = record(record(record(this.snapshot.status?.payload).data).latest_reset);
+            this.write("latest-time", beijingTime(latest.announced_at));
+            this.write("latest-link", latest.reset_type === "banked" ? "备用额度 ↗" : "常规重置 ↗");
+            this.link("latest-link", sourceLink(record(latest.source).url));
+            const cells = this.querySelectorAll<HTMLAnchorElement>(".radar-day");
+            calendarDays(this.snapshot.history, now).forEach((day, index) => {
+                const cell = cells[index];
+                cell.dataset.type = day.type;
+                const kind = day.type === "both" ? "常规与备用" : day.type === "banked" ? "备用" : "常规";
+                cell.title = `${day.date} · ${day.count ? `${day.count} 条${kind}公告` : "未收录公告"}`;
+                cell.setAttribute("aria-label", cell.title);
+                cell.querySelector("span")!.textContent = day.date.slice(8);
+                if (day.link) cell.href = day.link; else cell.removeAttribute("href");
+            });
+            this.write("history-note", fresh(this.snapshot.history, now) ? "" : this.snapshot.history ? `历史缓存 · ${beijingTime(this.snapshot.history.fetchedAt, true)}` : "历史记录暂不可用");
+            let oldReleases = false;
+            for (const key of ["codex", "claude"] as const) {
+                const row = this.querySelector<HTMLAnchorElement>(`[data-release="${key}"]`)!;
+                const data = record(this.snapshot[key]?.payload);
+                const href = sourceLink(data.html_url);
+                if (href) row.href = href;
+                row.querySelector("[data-release-version]")!.textContent = text(data.tag_name).replace(/^rust-/, "") || "查看官方版本";
+                row.querySelector("[data-release-date]")!.textContent = data.published_at ? beijingTime(data.published_at).split(" ")[0] : "↗";
+                row.title = this.snapshot[key] ? `发布于 ${beijingTime(data.published_at, true)}；检查于 ${beijingTime(this.snapshot[key]!.fetchedAt, true)}` : "打开官方发布页";
+                if (!fresh(this.snapshot[key], now, RELEASE_POLL + POLL)) oldReleases = true;
+            }
+            this.write("release-note", oldReleases ? "版本数据待刷新，可前往官方发布页核对" : "来自官方发布页 · 每 30 分钟检查");
+            const current = fresh(this.snapshot.status, now);
+            this.write("refresh-state", this.busy ? "正在检查动态…" : this.failed ? "部分来源暂不可用 · 稍后重试" : current ? "每 5 分钟自动检查" : "显示历史缓存 · 等待更新");
+            this.field("refresh-state").dataset.fresh = String(current && !this.failed);
+            this.write("updated", this.snapshot.status ? `重置数据检查于 ${beijingTime(this.snapshot.status.fetchedAt, true)}` : "尚未获取重置数据");
+            const button = this.querySelector<HTMLButtonElement>(".radar-refresh")!;
+            button.disabled = this.busy || now - this.lastManual < 60_000;
+            button.classList.toggle("is-loading", this.busy);
+        }
+    }
+    if (!customElements.get("ai-radar")) customElements.define("ai-radar", AIRadar);
+</script>
+
+<style>
+    .radar-rail { margin-bottom: 1rem; min-width: 0; }
+    ai-radar { display: block; color: #50535b; font-size: 12px; line-height: 1.6; }
+    .radar-shell { background: var(--card-bg); border: 1px solid var(--line-divider); border-radius: var(--radius-large); overflow: hidden; }
+    .radar-heading { display: flex; gap: 10px; align-items: center; padding: 16px; cursor: pointer; list-style: none; }
+    .radar-heading::-webkit-details-marker { display: none; }
+    .radar-mark { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; background: var(--btn-regular-bg); color: var(--btn-content); }
+    .radar-mark svg { width: 25px; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    .radar-mark .radar-dot { fill: var(--btn-content); stroke: var(--card-bg); }
+    .radar-heading-text { display: flex; flex: 1; align-items: baseline; gap: 12px; }
+    .radar-heading strong { color: #292c34; font-size: 17px; letter-spacing: .025em; }
+    .radar-heading small { color: #888c95; font-size: 11px; }
+    .radar-chevron { color: #9297a1; font-size: 21px; transition: transform .2s; }
+    .radar-shell[open] > .radar-heading .radar-chevron { transform: rotate(180deg); }
+    .radar-body { padding: 0 16px 16px; }
+    .radar-section-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #898d96; font-size: 10px; letter-spacing: .04em; margin-bottom: 9px; }
+    .radar-section-label > span:first-child { color: #686d77; font-weight: 600; }
+    .radar-section-label a { color: var(--btn-content); }
+    .radar-signal { padding: 13px; background: var(--btn-regular-bg); border-radius: 11px; }
+    .radar-signal:is([data-kind="stale"], [data-kind="unavailable"]) { background: var(--btn-plain-bg-hover); }
+    .radar-signal:is([data-kind="stale"], [data-kind="unavailable"]) .radar-status { color: #9096a0; }
+    .radar-status { display: inline-flex; align-items: center; gap: 5px; color: var(--btn-content); font-size: 10px; font-weight: 600; }
+    .radar-status::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+    .radar-signal h2 { color: #303844; font-size: 15px; line-height: 1.5; margin: 6px 0; font-weight: 700; letter-spacing: -.02em; }
+    .radar-signal > p { color: #747c89; font-size: 11px; line-height: 1.8; margin: 0; }
+    .radar-window { padding-top: 9px; margin-top: 10px; border-top: 1px solid var(--line-divider); }
+    .radar-window span { display: block; color: #7f8693; font-size: 10px; }
+    .radar-window strong { color: var(--btn-content); font-size: 17px; letter-spacing: .03em; font-variant-numeric: tabular-nums; font-weight: 600; }
+    .radar-evidence { margin-top: 10px; font-size: 10px; }
+    .radar-evidence summary { display: flex; justify-content: space-between; list-style: none; cursor: pointer; color: var(--btn-content); }
+    .radar-evidence summary::-webkit-details-marker { display: none; }
+    .radar-evidence p { margin: 8px 0; overflow-wrap: anywhere; line-height: 1.8; }
+    .radar-evidence a { color: var(--btn-content); text-decoration: underline; text-underline-offset: 3px; }
+    .radar-latest { display: flex; justify-content: space-between; align-items: center; padding: 13px 0; gap: 8px; border-bottom: 1px solid var(--line-divider); }
+    .radar-latest div { display: grid; gap: 2px; }
+    .radar-latest span { font-size: 10px; color: #90949c; }
+    .radar-latest strong { color: #5b616c; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
+    .radar-latest a { color: var(--btn-content); font-size: 10px; white-space: nowrap; }
+    .radar-calendar { padding: 14px 0; border-bottom: 1px solid var(--line-divider); }
+    .radar-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+    .radar-day { height: 22px; border-radius: 4px; display: grid; place-items: center; background: var(--btn-plain-bg-hover); color: #a1a5ad; font-size: 9px; font-variant-numeric: tabular-nums; }
+    .radar-day[data-type="regular"], .radar-legend i[data-type="regular"] { background: var(--primary); color: #fff; }
+    .radar-day[data-type="banked"], .radar-legend i[data-type="banked"] { background: #b197cf; color: #fff; }
+    .radar-day[data-type="both"] { background: linear-gradient(135deg, var(--primary) 50%, #b197cf 50%); color: #fff; }
+    .radar-day[href]:hover { box-shadow: 0 0 0 2px var(--btn-content); }
+    .radar-legend { display: flex; gap: 12px; color: #90949c; font-size: 9px; margin-top: 9px; }
+    .radar-legend span { display: inline-flex; align-items: center; gap: 4px; }
+    .radar-legend i { display: inline-block; width: 7px; height: 7px; border-radius: 2px; background: var(--btn-plain-bg-hover); }
+    .radar-releases { padding: 14px 0 10px; border-bottom: 1px solid var(--line-divider); }
+    .radar-release { display: flex; align-items: center; gap: 9px; padding: 7px 0; border-radius: 6px; }
+    .radar-release:hover { background: var(--btn-plain-bg-hover); }
+    .radar-app-icon { display: grid; place-items: center; width: 29px; height: 29px; background: var(--btn-regular-bg); border-radius: 8px; color: var(--btn-content); font-weight: 700; font-size: 14px; }
+    .radar-release[data-release="claude"] .radar-app-icon { color: #b98064; background: #bc927814; font-size: 21px; }
+    .radar-release-copy { display: grid; flex: 1; min-width: 0; line-height: 1.6; }
+    .radar-release-copy strong { color: #555c68; font-size: 11px; font-weight: 600; }
+    .radar-release-copy > span { font-size: 10px; color: #9499a2; overflow-wrap: anywhere; }
+    .radar-release-date { font-size: 10px; color: #969ba3; }
+    .radar-cache-note { font-size: 9px; color: #9298a1; line-height: 1.7; margin: 5px 0 0; }
+    .radar-cache-note:empty { display: none; }
+    .radar-refresh-row { display: flex; align-items: center; justify-content: space-between; gap: 3px; margin-top: 11px; font-size: 9px; color: #969ba3; }
+    .radar-refresh-row [data-fresh="true"] { color: #7c9290; }
+    .radar-refresh { display: grid; place-items: center; width: 28px; height: 28px; flex-shrink: 0; color: #8f96a0; border-radius: 6px; }
+    .radar-refresh:hover { background: var(--btn-regular-bg); color: var(--btn-content); }
+    .radar-refresh:disabled { opacity: .4; cursor: wait; }
+    .radar-refresh svg { width: 14px; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .is-loading svg { animation: radar-spin 1.4s linear infinite; }
+    .radar-updated { font-size: 9px; color: #9ba0a8; font-variant-numeric: tabular-nums; }
+    .radar-footer { margin-top: 12px; color: #a0a4ac; font-size: 9px; line-height: 1.8; }
+    .radar-footer a { color: #838b99; }
+    .radar-footer a:hover { color: var(--btn-content); text-decoration: underline; }
+    ai-radar [hidden] { display: none !important; }
+    ai-radar :is(a, button, summary):focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+    :global(.dark) ai-radar { color: #b0b6c0; }
+    :global(.dark) .radar-heading strong, :global(.dark) .radar-signal h2 { color: #e0e4ec; }
+    :global(.dark) .radar-latest strong, :global(.dark) .radar-release-copy strong, :global(.dark) .radar-section-label > span:first-child { color: #b8bfcc; }
+    :global(.dark) .radar-signal > p { color: #a1aabd; }
+    @keyframes radar-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .is-loading svg { animation: none; } }
+    @media (min-width: 1760px) {
+        :global(#content-wrapper:has(.radar-rail)) { position: relative; }
+        :global(#swup-container:has(.radar-rail)) { overflow: visible; }
+        .radar-rail { position: absolute; top: 0; left: calc(100% + 16px); width: 260px; height: 100%; margin: 0; }
+        ai-radar { position: sticky; top: 24px; max-height: calc(100dvh - 48px); overflow-y: auto; scrollbar-width: thin; }
+        .radar-heading-text { display: grid; gap: 0; }
+    }
+</style>
