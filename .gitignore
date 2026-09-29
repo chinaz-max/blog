@@ -4,8 +4,12 @@ dist/
 # generated types
 .astro/
 
+# Python snapshot refresh and tests
+__pycache__/
+
 # dependencies
 node_modules/
+.pnpm-store/
 
 # logs
 npm-debug.log*

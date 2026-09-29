@@ -1,15 +1,14 @@
 ---
 import seed from "../../../public/data/ai-radar.json";
-import { beijingTime, calendarDays, getSignal, record, sourceLink, text, type RadarSnapshot } from "../../utils/ai-radar";
+import { beijingTime, calendarDays, getSignal, record, sourceLink, type RadarSnapshot } from "../../utils/ai-radar";
+import { normalizeTiboFeed, type TiboFeed } from "../../utils/tibo-feed";
 
 const snapshot = seed as RadarSnapshot;
 const signal = getSignal(snapshot);
 const latest = record(record(record(snapshot.status?.payload).data).latest_reset);
 const calendar = calendarDays(snapshot.history);
-const releases = [
-    { key: "codex" as const, name: "Codex", icon: "C", fallback: "https://github.com/openai/codex/releases" },
-    { key: "claude" as const, name: "Claude Code", icon: "✳", fallback: "https://github.com/anthropics/claude-code/releases" },
-];
+let posts: TiboFeed["posts"] = [];
+try { posts = normalizeTiboFeed(snapshot.tibo?.payload).posts; } catch { /* Live data can recover. */ }
 ---
 
 <aside class="radar-rail" aria-label="AI 动态">
@@ -17,7 +16,7 @@ const releases = [
         <details class="radar-shell">
             <summary class="radar-heading">
                 <span class="radar-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8"/><path d="M12 4v8l5 5M8 12a4 4 0 0 0 4 4"/><circle cx="17.5" cy="6.5" r="2" class="radar-dot"/></svg></span>
-                <span class="radar-heading-text"><strong>AI 动态</strong><small>Tibo · 工具更新</small></span>
+                <span class="radar-heading-text"><strong>AI 动态</strong><small>Tibo · 中英动态</small></span>
                 <span class="radar-chevron" aria-hidden="true">⌄</span>
             </summary>
             <div class="radar-body">
@@ -49,24 +48,36 @@ const releases = [
                     <p class="radar-cache-note" data-field="history-note"></p>
                 </section>
 
-                <section class="radar-releases" aria-label="近期 AI 工具更新">
-                    <div class="radar-section-label"><span>近期 AI 工具更新</span><span>稳定版</span></div>
-                    {releases.map(release => {
-                        const data = record(snapshot[release.key]?.payload);
-                        return <a class="radar-release" data-release={release.key} href={sourceLink(data.html_url) || release.fallback} target="_blank" rel="noopener noreferrer">
-                            <span class="radar-app-icon" aria-hidden="true">{release.icon}</span>
-                            <span class="radar-release-copy"><strong>{release.name}</strong><span data-release-version>{text(data.tag_name).replace(/^rust-/, "") || "查看官方版本"}</span></span>
-                            <span class="radar-release-date" data-release-date>{data.published_at ? beijingTime(data.published_at).split(" ")[0] : "↗"}</span>
-                        </a>;
-                    })}
-                    <p class="radar-cache-note" data-field="release-note"></p>
+                <section class="radar-posts" aria-label="Tibo 最新动态" data-pagefind-ignore>
+                    <div class="radar-section-label"><span>Tibo 最新动态</span><a href="https://x.com/thsottiaux" target="_blank" rel="noopener noreferrer">@thsottiaux ↗</a></div>
+                    <div class="radar-post-toolbar">
+                        <span>近期 5 条 · 含回复</span>
+                        <div class="radar-languages" role="group" aria-label="帖子语言"><button type="button" data-language="zh" aria-pressed="true">中文</button><button type="button" data-language="en" aria-pressed="false">English</button></div>
+                    </div>
+                    <ol class="radar-post-list">{posts.map(post => <li class="radar-post" data-post-id={post.id}>
+                        <div class="radar-post-meta"><time datetime={post.at}>{beijingTime(post.at)}</time><span>{post.is_reply ? "回复" : "帖子"}</span></div>
+                        <p class="radar-post-text" lang={post.text_zh ? "zh-CN" : "en"}>{post.text_zh || post.text}</p>
+                        <div class="radar-post-bottom"><span class="radar-post-translation">{post.text_zh ? "机器翻译" : "英文原文 · 中文待更新"}</span><a href={post.url} target="_blank" rel="noopener noreferrer">查看原帖 ↗</a></div>
+                        <details class="radar-post-full" hidden={(post.text_zh || post.text).length <= 220}><summary>展开全文</summary><p class="radar-post-full-text" lang={post.text_zh ? "zh-CN" : "en"}>{post.text_zh || post.text}</p></details>
+                    </li>)}</ol>
+                    <template class="radar-post-template"><li class="radar-post">
+                        <div class="radar-post-meta"><time></time><span></span></div>
+                        <p class="radar-post-text"></p>
+                        <div class="radar-post-bottom"><span class="radar-post-translation"></span><a target="_blank" rel="noopener noreferrer">查看原帖 ↗</a></div>
+                        <details class="radar-post-full"><summary>展开全文</summary><p class="radar-post-full-text"></p></details>
+                    </li></template>
+                    <p class="radar-cache-note" data-field="posts-empty" hidden={posts.length > 0}>暂未获取帖子，可点击上方账号查看。</p>
+                    <p class="radar-cache-note" data-field="posts-note">每 5 分钟检查 · 社区收录可能延迟或不完整</p>
+                    <p class="radar-cache-note" data-field="posts-updated">{snapshot.tibo ? `帖子检查于 ${beijingTime(snapshot.tibo.fetchedAt, true)}` : "等待首次更新"}</p>
+                    <p class="radar-cache-note" data-field="translation-note" role="status"></p>
                 </section>
 
                 <div class="radar-refresh-row"><span data-field="refresh-state" role="status">打开页面后自动检查</span><button type="button" class="radar-refresh" aria-label="刷新 AI 动态" title="刷新 AI 动态"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M20 10a8 8 0 1 0-1.4 6M20 4v6h-6"/></svg></button></div>
                 <p class="radar-updated" data-field="updated">{snapshot.status ? `重置数据检查于 ${beijingTime(snapshot.status.fetchedAt, true)}` : "正在等待数据"}</p>
                 <footer class="radar-footer">
                     <p>社区信息，不代表官方承诺或个人额度。</p>
-                    <p>数据 <a href="https://codex-resets.com/" target="_blank" rel="noopener noreferrer">Codex Resets ↗</a> · GitHub</p>
+                    <p>重置 <a href="https://codex-resets.com/" target="_blank" rel="noopener noreferrer">Codex Resets ↗</a> · 帖子 <a href="https://willreset.com/developers" target="_blank" rel="noopener noreferrer">Will Codex Reset ↗</a></p>
+                    <p>翻译 <a href="https://mymemory.translated.net/" target="_blank" rel="noopener noreferrer">MyMemory ↗</a> · 以英文原文为准</p>
                     <p>灵感来自 <a href="https://codex-reset.top/" target="_blank" rel="noopener noreferrer">Tibo 重置助手 ↗</a></p>
                 </footer>
             </div>
@@ -76,10 +87,12 @@ const releases = [
 
 <script>
     import { SOURCES, beijingTime, calendarDays, fresh, getSignal, normalizePayload, record, sourceLink, text, timestamp, type DatasetKey, type RadarSnapshot } from "../../utils/ai-radar";
+    import { mergeTiboTranslations, translatePost, translationCost, type TiboFeed } from "../../utils/tibo-feed";
 
-    const CACHE_KEY = "chuzun-ai-radar-v1";
+    const CACHE_KEY = "chuzun-ai-radar-v2";
+    const LANGUAGE_KEY = "chuzun-tibo-language";
+    const BUDGET_KEY = "chuzun-tibo-translation-budget";
     const POLL = 5 * 60_000;
-    const RELEASE_POLL = 30 * 60_000;
     const keys = Object.keys(SOURCES) as DatasetKey[];
 
     class AIRadar extends HTMLElement {
@@ -91,6 +104,12 @@ const releases = [
         private lastAttempt = 0;
         private lastManual = 0;
         private failed = false;
+        private language: "zh" | "en" = "zh";
+        private translating = false;
+        private translationRetryAt = 0;
+        private translationNote = "";
+        private translationBudget = { day: "", used: 0 };
+        private postsFailed = false;
 
         connectedCallback() {
             this.life = new AbortController();
@@ -102,6 +121,7 @@ const releases = [
             clearInterval(this.timer);
             this.life?.abort();
             this.busy = false;
+            this.translating = false;
         }
 
         private merge(value: unknown) {
@@ -110,14 +130,28 @@ const releases = [
             for (const key of keys) {
                 const data = record(incoming[key]);
                 if (!Number.isFinite(timestamp(data.fetchedAt)) || timestamp(data.fetchedAt) > Date.now() + 60_000) continue;
-                if (this.snapshot[key] && timestamp(this.snapshot[key]!.fetchedAt) >= timestamp(data.fetchedAt)) continue;
-                try { this.snapshot[key] = { fetchedAt: text(data.fetchedAt), payload: normalizePayload(key, data.payload) }; } catch { /* Skip an invalid cache entry. */ }
+                try {
+                    let payload = normalizePayload(key, data.payload);
+                    if (this.snapshot[key] && timestamp(this.snapshot[key]!.fetchedAt) >= timestamp(data.fetchedAt)) {
+                        if (key === "tibo") this.snapshot[key]!.payload = mergeTiboTranslations(this.snapshot[key]!.payload as TiboFeed, payload as TiboFeed);
+                        continue;
+                    }
+                    if (key === "tibo") payload = mergeTiboTranslations(payload as TiboFeed, this.snapshot.tibo?.payload as TiboFeed | undefined);
+                    this.snapshot[key] = { fetchedAt: text(data.fetchedAt), payload };
+                } catch { /* Skip an invalid cache entry. */ }
             }
         }
 
         private init() {
             try { this.merge(JSON.parse(this.dataset.seed || "{}")); } catch { /* The live fetch can recover. */ }
             try { this.merge(JSON.parse(localStorage.getItem(CACHE_KEY) || "{}")); } catch { /* Storage is optional. */ }
+            try { this.language = localStorage.getItem(LANGUAGE_KEY) === "en" ? "en" : "zh"; } catch { /* Default to Chinese. */ }
+            this.querySelectorAll<HTMLButtonElement>("[data-language]").forEach(button => button.addEventListener("click", () => {
+                this.language = button.dataset.language === "en" ? "en" : "zh";
+                try { localStorage.setItem(LANGUAGE_KEY, this.language); } catch { /* Storage is optional. */ }
+                this.renderPosts();
+                void this.translateMissing();
+            }, { signal: this.life!.signal }));
             const media = matchMedia("(min-width: 1760px)");
             const setExpanded = () => { this.querySelector<HTMLDetailsElement>(".radar-shell")!.open = media.matches; };
             setExpanded();
@@ -129,12 +163,15 @@ const releases = [
             }, { signal: this.life!.signal });
             document.addEventListener("visibilitychange", () => {
                 if (!document.hidden && Date.now() - this.lastAttempt >= POLL) void this.refresh();
+                if (!document.hidden) void this.translateMissing();
             }, { signal: this.life!.signal });
             this.render();
+            void this.translateMissing();
             void this.refresh();
             this.timer = setInterval(() => {
                 if (document.hidden) return;
                 this.render();
+                void this.translateMissing();
                 if (Date.now() - this.lastAttempt >= POLL) void this.refresh();
             }, 60_000);
         }
@@ -153,7 +190,7 @@ const releases = [
         private async refresh(force = false) {
             if (this.busy || !this.life || this.life.signal.aborted || document.hidden) return;
             const now = Date.now();
-            const due = keys.filter(key => force || !fresh(this.snapshot[key], now, key === "codex" || key === "claude" ? RELEASE_POLL : POLL));
+            const due = keys.filter(key => force || !fresh(this.snapshot[key], now, POLL));
             this.lastAttempt = now;
             if (!due.length) return;
             this.busy = true;
@@ -167,13 +204,104 @@ const releases = [
                 return { key, value: { fetchedAt: new Date().toISOString(), payload } };
             }));
             if (lifecycle.aborted) return;
-            for (const result of results) {
-                if (result.status === "fulfilled") this.snapshot[result.value.key] = result.value.value;
-                else this.failed = true;
+            for (const [index, result] of results.entries()) {
+                if (result.status === "fulfilled") {
+                    const { key, value } = result.value;
+                    if (key === "tibo") {
+                        value.payload = mergeTiboTranslations(value.payload as TiboFeed, this.snapshot.tibo?.payload as TiboFeed | undefined);
+                        this.postsFailed = false;
+                    }
+                    this.snapshot[key] = value;
+                } else {
+                    this.failed = true;
+                    if (due[index] === "tibo") this.postsFailed = true;
+                }
             }
             try { localStorage.setItem(CACHE_KEY, JSON.stringify(this.snapshot)); } catch { /* Live rendering does not require storage. */ }
             this.busy = false;
             this.render();
+            void this.translateMissing();
+        }
+
+        private renderPosts() {
+            const feed = this.snapshot.tibo?.payload as TiboFeed | undefined;
+            const posts = feed?.posts || [];
+            const list = this.querySelector<HTMLOListElement>(".radar-post-list")!;
+            const template = this.querySelector<HTMLTemplateElement>(".radar-post-template")!;
+            this.querySelectorAll<HTMLButtonElement>("[data-language]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.language === this.language)));
+            for (const node of list.querySelectorAll<HTMLElement>("[data-post-id]")) if (!posts.some(post => post.id === node.dataset.postId)) node.remove();
+            posts.forEach((post, index) => {
+                let node = list.querySelector<HTMLElement>(`[data-post-id="${post.id}"]`);
+                if (!node) {
+                    node = template.content.firstElementChild!.cloneNode(true) as HTMLElement;
+                    node.dataset.postId = post.id;
+                }
+                if (list.children[index] !== node) list.insertBefore(node, list.children[index] || null);
+                const translated = this.language === "zh" && Boolean(post.text_zh);
+                const content = translated ? post.text_zh : post.text;
+                const time = node.querySelector("time")!;
+                time.dateTime = post.at;
+                time.textContent = beijingTime(post.at);
+                time.title = `北京时间 ${beijingTime(post.at, true)}`;
+                node.querySelector(".radar-post-meta span")!.textContent = post.is_reply ? "回复" : "帖子";
+                for (const paragraph of node.querySelectorAll<HTMLElement>(".radar-post-text, .radar-post-full-text")) {
+                    if (paragraph.textContent !== content) paragraph.textContent = content;
+                    paragraph.lang = translated ? "zh-CN" : "en";
+                }
+                node.querySelector(".radar-post-bottom a")!.setAttribute("href", post.url);
+                node.querySelector(".radar-post-translation")!.textContent = translated ? (translationCost(post.text) ? "机器翻译" : "原帖内容") : this.language === "en" ? "英文原文" : "英文原文 · 中文待更新";
+                node.querySelector<HTMLElement>(".radar-post-full")!.hidden = content.length <= 220;
+            });
+            this.field("posts-empty").hidden = posts.length > 0;
+            this.write("posts-note", this.postsFailed ? "来源暂不可用 · 保留上次内容" : fresh(this.snapshot.tibo, Date.now()) ? "每 5 分钟检查 · 社区收录可能延迟或不完整" : "帖子缓存待刷新 · 社区收录可能延迟或不完整");
+            this.write("posts-updated", this.snapshot.tibo ? `帖子检查于 ${beijingTime(this.snapshot.tibo.fetchedAt, true)}` : "等待首次更新");
+            this.write("translation-note", this.language === "zh" ? this.translating ? "正在翻译新帖子…" : this.translationNote : "");
+        }
+
+        private async translateMissing() {
+            if (this.translating || !this.life || this.life.signal.aborted || document.hidden || this.language !== "zh" || Date.now() < this.translationRetryAt) return;
+            const posts = (this.snapshot.tibo?.payload as TiboFeed | undefined)?.posts.filter(post => !post.text_zh) || [];
+            if (!posts.length) { this.translationNote = ""; this.renderPosts(); return; }
+            const lifecycle = this.life.signal;
+            this.translating = true;
+            this.translationNote = "";
+            this.renderPosts();
+            try {
+                for (const post of posts) {
+                    if (document.hidden || this.language !== "zh") break;
+                    lifecycle.throwIfAborted();
+                    const day = new Date().toISOString().slice(0, 10);
+                    try {
+                        const saved = JSON.parse(localStorage.getItem(BUDGET_KEY) || "{}");
+                        if (saved.day === day && Number.isFinite(saved.used) && saved.used >= 0) this.translationBudget = saved;
+                    } catch { /* Keep the in-memory budget if storage is unavailable. */ }
+                    if (this.translationBudget.day !== day) this.translationBudget = { day, used: 0 };
+                    const cost = translationCost(post.text);
+                    if (cost > 4500) {
+                        this.translationNote = "部分长帖超出单日免费翻译额度，暂显示英文。";
+                        continue;
+                    }
+                    if (this.translationBudget.used + cost > 4500) {
+                        this.translationNote = "今日免费翻译额度已用完，未翻译内容显示英文。";
+                        this.translationRetryAt = Date.parse(`${day}T00:00:00Z`) + 86_400_000;
+                        break;
+                    }
+                    this.translationBudget.used += cost;
+                    try { localStorage.setItem(BUDGET_KEY, JSON.stringify(this.translationBudget)); } catch { /* Never require storage. */ }
+                    const translated = await translatePost(post.text, AbortSignal.any([lifecycle, AbortSignal.timeout(40_000)]));
+                    if (lifecycle.aborted) return;
+                    const current = (this.snapshot.tibo?.payload as TiboFeed | undefined)?.posts.find(item => item.id === post.id && item.text === post.text);
+                    if (current) current.text_zh = translated;
+                    try { localStorage.setItem(CACHE_KEY, JSON.stringify(this.snapshot)); } catch { /* Keep the in-memory translation. */ }
+                    this.renderPosts();
+                }
+            } catch {
+                if (lifecycle.aborted) return;
+                this.translationNote = "免费翻译暂不可用，保留英文原文，稍后自动重试。";
+                this.translationRetryAt = Date.now() + 30 * 60_000;
+            } finally {
+                if (!lifecycle.aborted) { this.translating = false; this.renderPosts(); }
+            }
         }
 
         private render() {
@@ -204,18 +332,7 @@ const releases = [
                 if (day.link) cell.href = day.link; else cell.removeAttribute("href");
             });
             this.write("history-note", fresh(this.snapshot.history, now) ? "" : this.snapshot.history ? `历史缓存 · ${beijingTime(this.snapshot.history.fetchedAt, true)}` : "历史记录暂不可用");
-            let oldReleases = false;
-            for (const key of ["codex", "claude"] as const) {
-                const row = this.querySelector<HTMLAnchorElement>(`[data-release="${key}"]`)!;
-                const data = record(this.snapshot[key]?.payload);
-                const href = sourceLink(data.html_url);
-                if (href) row.href = href;
-                row.querySelector("[data-release-version]")!.textContent = text(data.tag_name).replace(/^rust-/, "") || "查看官方版本";
-                row.querySelector("[data-release-date]")!.textContent = data.published_at ? beijingTime(data.published_at).split(" ")[0] : "↗";
-                row.title = this.snapshot[key] ? `发布于 ${beijingTime(data.published_at, true)}；检查于 ${beijingTime(this.snapshot[key]!.fetchedAt, true)}` : "打开官方发布页";
-                if (!fresh(this.snapshot[key], now, RELEASE_POLL + POLL)) oldReleases = true;
-            }
-            this.write("release-note", oldReleases ? "版本数据待刷新，可前往官方发布页核对" : "来自官方发布页 · 每 30 分钟检查");
+            this.renderPosts();
             const current = fresh(this.snapshot.status, now);
             this.write("refresh-state", this.busy ? "正在检查动态…" : this.failed ? "部分来源暂不可用 · 稍后重试" : current ? "每 5 分钟自动检查" : "显示历史缓存 · 等待更新");
             this.field("refresh-state").dataset.fresh = String(current && !this.failed);
@@ -276,15 +393,23 @@ const releases = [
     .radar-legend { display: flex; gap: 12px; color: #90949c; font-size: 9px; margin-top: 9px; }
     .radar-legend span { display: inline-flex; align-items: center; gap: 4px; }
     .radar-legend i { display: inline-block; width: 7px; height: 7px; border-radius: 2px; background: var(--btn-plain-bg-hover); }
-    .radar-releases { padding: 14px 0 10px; border-bottom: 1px solid var(--line-divider); }
-    .radar-release { display: flex; align-items: center; gap: 9px; padding: 7px 0; border-radius: 6px; }
-    .radar-release:hover { background: var(--btn-plain-bg-hover); }
-    .radar-app-icon { display: grid; place-items: center; width: 29px; height: 29px; background: var(--btn-regular-bg); border-radius: 8px; color: var(--btn-content); font-weight: 700; font-size: 14px; }
-    .radar-release[data-release="claude"] .radar-app-icon { color: #b98064; background: #bc927814; font-size: 21px; }
-    .radar-release-copy { display: grid; flex: 1; min-width: 0; line-height: 1.6; }
-    .radar-release-copy strong { color: #555c68; font-size: 11px; font-weight: 600; }
-    .radar-release-copy > span { font-size: 10px; color: #9499a2; overflow-wrap: anywhere; }
-    .radar-release-date { font-size: 10px; color: #969ba3; }
+    .radar-posts { padding: 14px 0 10px; border-bottom: 1px solid var(--line-divider); }
+    .radar-post-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 4px; color: #8b929f; font-size: 9px; }
+    .radar-languages { display: flex; gap: 2px; padding: 2px; border-radius: 7px; background: var(--btn-plain-bg-hover); }
+    .radar-languages button { padding: 3px 7px; border-radius: 5px; font-size: 10px; }
+    .radar-languages button[aria-pressed="true"] { background: var(--btn-regular-bg); color: var(--btn-content); font-weight: 600; }
+    .radar-post-list { list-style: none; padding: 0; margin: 0; }
+    .radar-post { padding: 11px 0; }
+    .radar-post + .radar-post { border-top: 1px solid var(--line-divider); }
+    .radar-post-meta, .radar-post-bottom { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; color: #9299a5; font-size: 9px; }
+    .radar-post-meta time { font-variant-numeric: tabular-nums; }
+    .radar-post-text, .radar-post-full-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11px; line-height: 1.85; margin: 6px 0; }
+    .radar-post-text { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+    .radar-post:has(.radar-post-full[hidden]) > .radar-post-text { display: block; }
+    .radar-post-bottom a, .radar-post-full summary { color: var(--btn-content); font-size: 9px; }
+    .radar-post-bottom a { white-space: nowrap; }
+    .radar-post-full summary { cursor: pointer; margin-top: 5px; }
+    .radar-post:has(.radar-post-full[open]) > .radar-post-text { display: none; }
     .radar-cache-note { font-size: 9px; color: #9298a1; line-height: 1.7; margin: 5px 0 0; }
     .radar-cache-note:empty { display: none; }
     .radar-refresh-row { display: flex; align-items: center; justify-content: space-between; gap: 3px; margin-top: 11px; font-size: 9px; color: #969ba3; }
@@ -302,7 +427,7 @@ const releases = [
     ai-radar :is(a, button, summary):focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
     :global(.dark) ai-radar { color: #b0b6c0; }
     :global(.dark) .radar-heading strong, :global(.dark) .radar-signal h2 { color: #e0e4ec; }
-    :global(.dark) .radar-latest strong, :global(.dark) .radar-release-copy strong, :global(.dark) .radar-section-label > span:first-child { color: #b8bfcc; }
+    :global(.dark) .radar-latest strong, :global(.dark) .radar-section-label > span:first-child { color: #b8bfcc; }
     :global(.dark) .radar-signal > p { color: #a1aabd; }
     @keyframes radar-spin { to { transform: rotate(360deg); } }
     @media (prefers-reduced-motion: reduce) { .is-loading svg { animation: none; } }

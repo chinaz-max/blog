@@ -45,12 +45,12 @@ test("calendar uses announcement dates in Beijing and separates banked resets", 
     assert.equal(calendarDays(undefined, now).at(-1).type, "none");
 });
 
-test("invalid data and unsafe links cannot become release cards", () => {
-    const release = { tag_name: "v1.0", html_url: "https://github.com/openai/codex/releases", published_at: iso(0), draft: false, prerelease: false };
-    assert.equal(normalizePayload("codex", release).tag_name, "v1.0");
-    assert.throws(() => normalizePayload("codex", { ...release, prerelease: true }));
-    assert.throws(() => normalizePayload("codex", { ...release, html_url: "javascript:alert(1)" }));
+test("invalid data and unsafe links cannot become radar sources", () => {
     assert.throws(() => normalizePayload("status", { message: "Rate limited" }));
     assert.equal(sourceLink("https://x.com.evil.example/test"), null);
     assert.equal(getSignal({ version: 1 }, now).kind, "unavailable");
+});
+
+test("an old feed check remains stale even after a successful local request", () => {
+    assert.equal(fresh({ fetchedAt: iso(0), payload: { fetched_at: iso(-21 * 60_000) } }, now), false);
 });

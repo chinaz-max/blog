@@ -1,7 +1,7 @@
 {
   "version": 1,
   "status": {
-    "fetchedAt": "2026-09-28T07:49:59.136907+00:00",
+    "fetchedAt": "2026-09-29T16:30:07.306773+00:00",
     "payload": {
       "data": {
         "latest_reset": {
@@ -30,18 +30,18 @@
         "stats": {
           "total": 55,
           "last_reset_at": "2026-09-26T18:17:54.000Z",
-          "days_since_last": 1.6,
+          "days_since_last": 2.9,
           "avg_interval_days": 6.9
         }
       },
       "meta": {
         "api_version": "v1",
-        "generated_at": "2026-09-28T07:49:01.728Z"
+        "generated_at": "2026-09-29T16:30:03.995Z"
       }
     }
   },
   "history": {
-    "fetchedAt": "2026-09-28T07:49:59.138295+00:00",
+    "fetchedAt": "2026-09-29T16:30:09.180386+00:00",
     "payload": {
       "data": [
         {
@@ -599,30 +599,56 @@
       },
       "meta": {
         "api_version": "v1",
-        "generated_at": "2026-09-28T07:45:10.222Z"
+        "generated_at": "2026-09-29T16:29:12.985Z"
       }
     }
   },
-  "codex": {
-    "fetchedAt": "2026-09-28T07:49:59.944253+00:00",
+  "tibo": {
+    "fetchedAt": "2026-09-29T16:30:09.221649+00:00",
     "payload": {
-      "name": "0.158.0",
-      "tag_name": "rust-v0.158.0",
-      "html_url": "https://github.com/openai/codex/releases/tag/rust-v0.158.0",
-      "published_at": "2026-09-28T05:07:23Z",
-      "draft": false,
-      "prerelease": false
-    }
-  },
-  "claude": {
-    "fetchedAt": "2026-09-28T07:50:00.513206+00:00",
-    "payload": {
-      "name": "v2.1.283",
-      "tag_name": "v2.1.283",
-      "html_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.283",
-      "published_at": "2026-09-25T21:50:12Z",
-      "draft": false,
-      "prerelease": false
+      "fetched_at": "2026-09-29T16:30:12.506816163Z",
+      "posts": [
+        {
+          "id": "2104961497055240633",
+          "url": "https://x.com/thsottiaux/status/2104961497055240633",
+          "text": "https://t.co/3zfRsyb9A9 https://t.co/aZofQKqwsu",
+          "at": "2026-09-29T15:48:23+00:00",
+          "is_reply": false,
+          "text_zh": "https://t.co/3zfRsyb9A9 https://t.co/aZofQKqwsu"
+        },
+        {
+          "id": "2104952602710638877",
+          "url": "https://x.com/thsottiaux/status/2104952602710638877",
+          "text": "@jukan05 Hello, this is Tibo, you’ve reached the wrong company. Let me redirect you to …",
+          "at": "2026-09-29T15:13:03+00:00",
+          "is_reply": true,
+          "text_zh": "@jukan05 您好，我是Tibo ，您联系错了公司。让我将您重定向到……"
+        },
+        {
+          "id": "2104951965184925941",
+          "url": "https://x.com/thsottiaux/status/2104951965184925941",
+          "text": "I’ll explain the new Pro 200 plan differently, before I start live tweeting from DevDay on things that are going out!\n\nToday we are going to ship a number of things that increase what you can do across the Plus and Pro plans. A lot of compute is online for this increase. As we increase the floor, we are changing the relative difference between plans to be\n\nPlus = 1X\nPro 100 = 5X\nPro 200 = 10X\n\nand we are reopening subscriptions for Pro 200 (we had paused it). If you have an existing plan you will keep the 20X multiplier for a bit and also receive a lot of additional credits because we know changes are hard even if it means that everyone will get more in the end.",
+          "at": "2026-09-29T15:10:31+00:00",
+          "is_reply": false,
+          "text_zh": "在我从DevDay开始实时推特之前，我将以不同的方式解释新的Pro 200计划！\n\n今天，我们将推出一些东西，增加您在Plus和Pro计划中可以做的事情。为了实现这一增长，大量的计算都在线。随着我们增加下限，我们正在改变计划之间的相对差异，\n\nPLUS = 1X\nPRO 100 = 5X\nPRO 200 = 10倍\n\n我们正在重新开放Pro 200的订阅（我们已暂停）。如果您有一个现有的计划，您将保留20倍的乘数，并获得大量的额外积分，因为我们知道即使这意味着每个人最终都会获得更多的变化也很难。"
+        },
+        {
+          "id": "2104936468624105813",
+          "url": "https://x.com/thsottiaux/status/2104936468624105813",
+          "text": "@imnotchalk 👀",
+          "at": "2026-09-29T14:08:56+00:00",
+          "is_reply": true,
+          "text_zh": "@imnotchalk 👀"
+        },
+        {
+          "id": "2104934849970913519",
+          "url": "https://x.com/thsottiaux/status/2104934849970913519",
+          "text": "@theo And then I ran to Theo and whispered in his right ear “wake up Theo, it’s DevDay today”",
+          "at": "2026-09-29T14:02:30+00:00",
+          "is_reply": true,
+          "text_zh": "@theo 然后我跑向西奥，在他的右耳边低声说： “西奥醒醒，今天是DevDay”"
+        }
+      ]
     }
   }
 }

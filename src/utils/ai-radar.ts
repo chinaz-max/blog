@@ -1,8 +1,9 @@
+import { normalizeTiboFeed, TIBO_FEED_URL } from "./tibo-feed.ts";
+
 export const SOURCES = {
     status: "https://codex-resets.com/api/v1/status",
     history: "https://codex-resets.com/api/v1/resets?limit=100",
-    codex: "https://api.github.com/repos/openai/codex/releases/latest",
-    claude: "https://api.github.com/repos/anthropics/claude-code/releases/latest",
+    tibo: TIBO_FEED_URL,
 } as const;
 export type DatasetKey = keyof typeof SOURCES;
 export type Dataset = { fetchedAt: string; payload: unknown };
@@ -18,6 +19,7 @@ export function sourceLink(value: unknown): string | null {
     } catch { return null; }
 }
 export function normalizePayload(key: DatasetKey, value: unknown): unknown {
+    if (key === "tibo") return normalizeTiboFeed(value);
     const payload = record(value);
     if (key === "history") {
         if (!Array.isArray(payload.data)) throw new Error("Invalid history");
@@ -30,14 +32,15 @@ export function normalizePayload(key: DatasetKey, value: unknown): unknown {
         if (!("latest_reset" in record(payload.data))) throw new Error("Invalid status");
         return { data: payload.data, meta: payload.meta };
     }
-    if (!text(payload.tag_name) || !sourceLink(payload.html_url) || !Number.isFinite(timestamp(payload.published_at)) || payload.prerelease !== false || payload.draft !== false) throw new Error("Invalid stable release");
-    return Object.fromEntries(["name", "tag_name", "html_url", "published_at", "draft", "prerelease"].map(field => [field, payload[field]]));
+    throw new Error("Unknown radar source");
 }
 export function fresh(dataset: Dataset | undefined, now: number, ttl = 20 * 60_000) {
     if (!dataset) return false;
     const times = [timestamp(dataset.fetchedAt)];
     const generated = record(record(dataset.payload).meta).generated_at;
     if (generated !== undefined) times.push(timestamp(generated));
+    const feedTime = record(dataset.payload).fetched_at;
+    if (feedTime !== undefined) times.push(timestamp(feedTime));
     return times.every(time => Number.isFinite(time) && now - time >= -60_000 && now - time <= ttl);
 }
 export function beijingTime(value: unknown, withYear = false) {
