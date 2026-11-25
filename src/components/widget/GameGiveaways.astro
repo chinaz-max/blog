@@ -46,9 +46,9 @@ const platforms = [
                 })}
                 <div class="giveaway-refresh-row"><span data-refresh-state role="status">正在检查活动更新</span><button type="button" class="giveaway-refresh" aria-label="刷新免费游戏动态">刷新</button></div>
                 <footer class="giveaway-footer">
-                    <p>后台约每 30 分钟更新，页面每 5 分钟检查。截止时间为北京时间，活动与领取资格以商店页面为准。</p>
+                    <p>页面每 5 分钟检查免费接口。已注明的截止时间为北京时间；来源未注明时区时请查看活动页。</p>
                     <p>Epic 冬促连送会随官方公布自动收录。Steam Key 活动可能需要第三方账号或完成任务；不含试玩周末、DLC 与普通折扣。</p>
-                    <p>来源：<a href="https://store.epicgames.com/zh-CN/free-games" target="_blank" rel="noopener noreferrer">Epic Games</a> · <a href="https://www.gamerpower.com/" target="_blank" rel="noopener noreferrer">GamerPower</a></p>
+                    <p>官方快照与预告：<a href="https://store.epicgames.com/zh-CN/free-games" target="_blank" rel="noopener noreferrer">Epic Games</a> · 实时活动：<a href="https://www.gamerpower.com/" target="_blank" rel="noopener noreferrer">GamerPower</a>。社区收录可能延迟。</p>
                 </footer>
             </div>
         </details>
@@ -63,7 +63,7 @@ const platforms = [
 </aside>
 
 <script>
-    import { beijingDate, gameState, normalizeDataset, visibleGames } from "../../utils/free-games.js";
+    import { beijingDate, BROWSER_GAME_SOURCES, gameState, normalizeCommunityEpic, normalizeDataset, normalizeSteam, visibleGames } from "../../utils/free-games.js";
     import type { GamesSnapshot } from "../../utils/free-games-types";
     const CACHE_KEY = "chuzun-free-games-v1";
     const POLL = 5 * 60_000;
@@ -130,17 +130,25 @@ const platforms = [
             try {
                 const url = new URL(this.dataset.snapshotUrl!, location.href);
                 if (url.origin !== location.origin) throw new Error("Invalid snapshot origin");
-                const response = await fetch(url, { cache: "no-store", credentials: "omit", signal: AbortSignal.any([lifecycle, AbortSignal.timeout(12_000)]) });
-                if (!response.ok) throw new Error("Snapshot request failed");
-                const data = await response.json();
-                if (data?.version !== 1 || !platforms.some(platform => data[platform])) throw new Error("Invalid snapshot");
-                let valid = false;
-                for (const platform of platforms) { try { normalizeDataset(data[platform], platform); valid = true; } catch { /* A source can fail independently. */ } }
-                if (!valid) throw new Error("No valid source");
+                const request = async (source: string | URL) => {
+                    const response = await fetch(source, { cache: "no-store", credentials: "omit", signal: AbortSignal.any([lifecycle, AbortSignal.timeout(12_000)]) });
+                    if (!response.ok) throw new Error("Source request failed");
+                    return response.json();
+                };
+                const results = await Promise.allSettled([request(url), ...platforms.map(platform => request(BROWSER_GAME_SOURCES[platform]))]);
                 if (lifecycle.aborted) return;
-                this.merge(data);
+                if (results[0].status === "fulfilled") this.merge(results[0].value);
+                let failed = false;
+                for (const [index, platform] of platforms.entries()) {
+                    const result = results[index + 1];
+                    try {
+                        if (result.status !== "fulfilled") throw new Error("Source unavailable");
+                        const games = platform === "epic" ? normalizeCommunityEpic(result.value, this.snapshot.epic) : normalizeSteam(result.value);
+                        this.snapshot[platform] = { fetchedAt: new Date().toISOString(), games };
+                    } catch { failed = true; }
+                }
                 try { localStorage.setItem(CACHE_KEY, JSON.stringify(this.snapshot)); } catch { /* Keep the in-memory data. */ }
-                this.failed = false;
+                this.failed = failed;
             } catch {
                 if (lifecycle.aborted) return;
                 this.failed = true;

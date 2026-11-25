@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
-import { beijingDate, checkedLink, gameState, normalizeDataset, normalizeEpic, normalizeSteam, utcTime, visibleGames } from "../src/utils/free-games.js";
+import { beijingDate, BROWSER_GAME_SOURCES, checkedLink, gameState, normalizeCommunityEpic, normalizeDataset, normalizeEpic, normalizeSteam, utcTime, visibleGames } from "../src/utils/free-games.js";
 import { refreshGames } from "./update-free-games.mjs";
 
 const now = Date.parse("2026-11-25T12:00:00Z");
@@ -78,12 +78,21 @@ test("source failure preserves that source's previous timestamp independently", 
     assert.equal(result.steam.fetchedAt, at(0));
     assert.deepEqual(result.steam.games, []);
 });
-test("homepage and build switch away from Tibo to the game widget and scheduled updates", () => {
+test("homepage and build switch away from Tibo and browser sources are free public APIs", () => {
     const page = readFileSync(new URL("../src/pages/[...page].astro", import.meta.url), "utf8");
     assert.match(page, /<GameGiveaways\s*\/>/);
     assert.doesNotMatch(page, /<AIRadar/);
     const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
     assert.match(pkg.scripts.build, /update-free-games/);
-    const workflow = readFileSync(new URL("../.github/workflows/deploy.yml", import.meta.url), "utf8");
-    assert.match(workflow, /cron: '7,37 \* \* \* \*'/);
+    assert.match(BROWSER_GAME_SOURCES.epic, /gamerpower.com\/api\/giveaways\?platform=epic-games-store/);
+    assert.match(BROWSER_GAME_SOURCES.steam, /platform=steam/);
+});
+
+test("community Epic updates preserve official deadlines and do not revive expired games", () => {
+    const old = dataset(normalizeEpic(epicPayload([epic()]), now));
+    const raw = [steam({ title: "Free game (Epic Games) Giveaway", platforms: "PC, Epic Games Store" })];
+    const games = normalizeCommunityEpic(raw, old, now);
+    assert.equal(games[0].endAt, at(60_000));
+    assert.equal(games[0].url, "https://store.epicgames.com/zh-CN/p/free-game");
+    assert.deepEqual(normalizeCommunityEpic(raw, old, now + 60_000), []);
 });

@@ -3,6 +3,10 @@ export const GAME_SOURCES = {
     epic: "https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions?locale=zh-CN&country=CN&allowCountries=CN",
     steam: "https://www.gamerpower.com/api/giveaways?platform=steam&type=game&sort-by=date",
 };
+export const BROWSER_GAME_SOURCES = {
+    epic: "https://www.gamerpower.com/api/giveaways?platform=epic-games-store&type=game&sort-by=date",
+    steam: GAME_SOURCES.steam,
+};
 export const SOURCE_LINKS = {
     epic: "https://store.epicgames.com/zh-CN/free-games",
     steam: "https://www.gamerpower.com/giveaways/steam",
@@ -19,7 +23,7 @@ export function checkedLink(value, kind) {
         const url = new URL(str(value, 2048));
         if (url.protocol !== "https:" || url.username || url.password || url.port) return null;
         if (kind === "image") return ["cdn1.epicgames.com", "cdn2.unrealengine.com", "www.gamerpower.com", "gamerpower.com"].includes(url.hostname) ? url.href : null;
-        if (kind === "epic" && url.hostname === "store.epicgames.com" && /^\/zh-CN\/(p\/|free-games)/.test(url.pathname)) return url.href;
+        if (kind === "epic" && ((url.hostname === "store.epicgames.com" && /^\/zh-CN\/(p\/|free-games)/.test(url.pathname)) || ["www.gamerpower.com", "gamerpower.com"].includes(url.hostname))) return url.href;
         if (kind === "steam" && ((url.hostname === "store.steampowered.com" && /^\/(app|sub)\/\d+/.test(url.pathname)) || (["www.gamerpower.com", "gamerpower.com"].includes(url.hostname) && url.pathname.startsWith("/")))) return url.href;
     } catch { /* Invalid URLs are never rendered as links. */ }
     return null;
@@ -54,12 +58,12 @@ export function normalizeEpic(value, now = Date.now()) {
     return [...games.values()].sort((a, b) => Number(a.upcoming) - Number(b.upcoming) || Date.parse(a.endAt) - Date.parse(b.endAt)).slice(0, 8);
 }
 /** @returns {import('./free-games-types').Game[]} */
-export function normalizeSteam(value, now = Date.now()) {
+export function normalizeSteam(value, now = Date.now(), platform = "Steam") {
     if (obj(value).status === 201 && typeof obj(value).status_message === "string") return [];
     if (!Array.isArray(value)) throw new Error("Invalid Steam giveaway response");
     const games = new Map();
     for (const item of value.slice(0, 200)) {
-        if (!item || item.type !== "Game" || item.status !== "Active" || !str(item.platforms).split(",").some(platform => platform.trim() === "Steam")) continue;
+        if (!item || item.type !== "Game" || item.status !== "Active" || !str(item.platforms).split(",").some(name => name.trim() === platform)) continue;
         const title = str(item.title, 180), description = str(item.description, 2000);
         if (!title || /\b(demo|beta|playtest|free weekend|free to play|free-to-play|trial|DLC)\b/i.test(title + " " + description)) continue;
         const endAt = utcTime(item.end_date);
@@ -77,6 +81,24 @@ export function normalizeSteam(value, now = Date.now()) {
             upcoming: false, kind: key ? "key" : "store", note, instructions, deadlineUnknown: !endAt });
     }
     return [...games.values()].sort((a, b) => (Date.parse(a.endAt || "") || Infinity) - (Date.parse(b.endAt || "") || Infinity)).slice(0, 8);
+}
+/** @param {import('./free-games-types').GameDataset | undefined} previous
+ * @returns {import('./free-games-types').Game[]} */
+export function normalizeCommunityEpic(value, previous, now = Date.now()) {
+    const entries = normalizeSteam(value, now, "Epic Games Store");
+    const name = title => title.replace(/\s*\(Epic Games\).*$/i, "").trim().toLowerCase();
+    const games = entries.flatMap(game => {
+        const known = previous?.games.find(old => !old.upcoming && name(old.title) === name(game.title));
+        // A community listing cannot extend a known, expired official deadline.
+        if (known?.endAt && Date.parse(known.endAt) <= now) return [];
+        return [{ ...game, title: game.title.replace(/\s*\(Epic Games\)\s*Giveaway$/i, ""),
+            ...(known ? { url: known.url, image: known.image || game.image, startAt: known.startAt, endAt: known.endAt, deadlineUnknown: !known.endAt } : {}),
+            note: known?.endAt ? "国区活动 · 官方截止时间" : "社区收录 · 请核对地区和领取条件" }];
+    });
+    for (const game of previous?.games || []) {
+        if (game.upcoming && game.startAt && Date.parse(game.startAt) > now && !games.some(item => name(item.title) === name(game.title))) games.push(game);
+    }
+    return games.slice(0, 8);
 }
 /** @returns {import('./free-games-types').GameDataset} */
 export function normalizeDataset(value, platform, now = Date.now()) {
