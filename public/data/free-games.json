@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "epic": {
+    "fetchedAt": "2026-11-25T11:53:45.779Z",
+    "games": [
+      {
+        "id": "1f9a12b06b4f437790b6913ad136a08c-2026-11-19T16:00:00.000Z",
+        "title": "Mark of the Deep",
+        "url": "https://store.epicgames.com/zh-CN/p/mark-of-the-deep-f7dc08",
+        "image": "https://cdn1.epicgames.com/spt-assets/83a240506a884c10ad8fb99694e57a0d/mark-of-the-deep-w1ygr.png",
+        "startAt": "2026-11-19T16:00:00.000Z",
+        "endAt": "2026-11-26T16:00:00.000Z",
+        "upcoming": false,
+        "kind": "store",
+        "note": "国区活动 · 领取后入库",
+        "instructions": "",
+        "deadlineUnknown": false
+      },
+      {
+        "id": "f0a333114190492c84a9decd2bb43875-2026-11-26T16:00:00.000Z",
+        "title": "Bread and Fred",
+        "url": "https://store.epicgames.com/zh-CN/p/bread-and-fred-1db362",
+        "image": "https://cdn1.epicgames.com/spt-assets/545b4dd8bb364c12b719268198a93ef3/bread-and-fred-3jnwn.jpg",
+        "startAt": "2026-11-26T16:00:00.000Z",
+        "endAt": "2026-12-03T16:00:00.000Z",
+        "upcoming": true,
+        "kind": "store",
+        "note": "国区活动 · 领取后入库",
+        "instructions": "",
+        "deadlineUnknown": false
+      }
+    ]
+  },
+  "steam": {
+    "fetchedAt": "2026-11-25T11:53:45.779Z",
+    "games": [
+      {
+        "id": "3716",
+        "title": "Dwarven Realms (Steam) Key Giveaway",
+        "url": "https://www.gamerpower.com/open/dwarven-realms-steam-key-giveaway",
+        "image": "https://www.gamerpower.com/offers/1b/6a59119a8eb8d.jpg",
+        "startAt": null,
+        "endAt": null,
+        "upcoming": false,
+        "kind": "key",
+        "note": "第三方 Key · 需账号及 10 ARP",
+        "instructions": "1. Log in to your free Alienware account and click the button to unlock your key (10 ARP required).\r\n2. Launch the Steam client and click the Games menu option.\r\n3. Choose \"activate a Product on Steam\" to redeem your Steam key.",
+        "deadlineUnknown": true
+      }
+    ]
+  }
+}

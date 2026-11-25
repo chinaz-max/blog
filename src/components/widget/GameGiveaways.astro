@@ -1,0 +1,265 @@
+---
+import seed from "../../../public/data/free-games.json";
+import { beijingDate, gameState, normalizeDataset, SOURCE_LINKS, visibleGames } from "../../utils/free-games.js";
+import type { GamesSnapshot } from "../../utils/free-games-types";
+
+const snapshot: GamesSnapshot = { version: 1 };
+for (const platform of ["epic", "steam"] as const) {
+    try { snapshot[platform] = normalizeDataset((seed as GamesSnapshot)[platform], platform); } catch { /* Live snapshot can recover. */ }
+}
+const platforms = [
+    { key: "epic" as const, name: "Epic 免费游戏", label: "冬促连送 / 每周免费", icon: "E", empty: "暂未收录可领取游戏，查看官方免费游戏页。" },
+    { key: "steam" as const, name: "Steam 喜加一", label: "完整游戏 · 含 Key 活动", icon: "S", empty: "暂未收录进行中的赠送活动，稍后自动检查。" },
+];
+---
+
+<aside class="giveaway-rail" aria-label="免费游戏动态" data-pagefind-ignore>
+    <game-giveaways data-seed={JSON.stringify(snapshot)} data-snapshot-url={`${import.meta.env.BASE_URL}data/free-games.json`}>
+        <details class="giveaway-shell">
+            <summary class="giveaway-heading">
+                <span class="giveaway-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 9h16v4H4zM6 13v8h12v-8M12 9v12M12 9H8.5A2.5 2.5 0 1 1 11 6.5L12 9Zm0 0h3.5A2.5 2.5 0 1 0 13 6.5L12 9Z"/></svg></span>
+                <span class="giveaway-heading-copy"><strong>游戏喜加一</strong><small>Epic · Steam</small></span>
+                <span class="giveaway-chevron" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="giveaway-body">
+                <p class="giveaway-intro">把好游戏收入库。<br />限时免费，不错过下一份惊喜。</p>
+                {platforms.map(platform => {
+                    const dataset = snapshot[platform.key];
+                    const games = visibleGames(dataset);
+                    return <section class="giveaway-section" data-platform={platform.key} aria-label={platform.name}>
+                        <div class="giveaway-section-heading"><span class="giveaway-platform-icon" aria-hidden="true">{platform.icon}</span><div><h2>{platform.name}</h2><p>{platform.label}</p></div><span class="giveaway-count" data-count>{games.length}</span></div>
+                        <ol class="giveaway-list">{games.map(game => {
+                            const state = gameState(game, dataset);
+                            return <li class="giveaway-card" data-game-id={game.id}>
+                                <img class="giveaway-cover" src={game.image || undefined} hidden={!game.image} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" />
+                                <div class="giveaway-card-top"><span class="giveaway-badge" data-kind={state.kind}>{state.label}</span><span class="giveaway-price">免费</span></div>
+                                <h3>{game.title}</h3>
+                                <p class="giveaway-condition">{game.note}</p>
+                                <p class="giveaway-deadline">{state.kind === "upcoming" ? `开始 ${beijingDate(game.startAt)}` : game.endAt ? `截止 ${beijingDate(game.endAt)}` : "截止时间 / 剩余名额请查看活动页"}</p>
+                                <a class="giveaway-claim" href={game.url} target="_blank" rel="noopener noreferrer">{state.action}</a>
+                                <details class="giveaway-instructions" hidden={!game.instructions}><summary>领取说明（来源原文）</summary><p>{game.instructions}</p></details>
+                            </li>;
+                        })}</ol>
+                        <p class="giveaway-empty" data-empty hidden={games.length > 0}>{platform.empty}</p>
+                        <div class="giveaway-source-row"><a href={SOURCE_LINKS[platform.key]} target="_blank" rel="noopener noreferrer">{platform.key === "epic" ? "Epic 官方活动" : "GamerPower 活动列表"}</a><span data-source-status>{dataset ? `检查于 ${beijingDate(dataset.fetchedAt)}` : "等待首次更新"}</span></div>
+                    </section>;
+                })}
+                <div class="giveaway-refresh-row"><span data-refresh-state role="status">正在检查活动更新</span><button type="button" class="giveaway-refresh" aria-label="刷新免费游戏动态">刷新</button></div>
+                <footer class="giveaway-footer">
+                    <p>后台约每 30 分钟更新，页面每 5 分钟检查。截止时间为北京时间，活动与领取资格以商店页面为准。</p>
+                    <p>Epic 冬促连送会随官方公布自动收录。Steam Key 活动可能需要第三方账号或完成任务；不含试玩周末、DLC 与普通折扣。</p>
+                    <p>来源：<a href="https://store.epicgames.com/zh-CN/free-games" target="_blank" rel="noopener noreferrer">Epic Games</a> · <a href="https://www.gamerpower.com/" target="_blank" rel="noopener noreferrer">GamerPower</a></p>
+                </footer>
+            </div>
+        </details>
+        <template class="giveaway-card-template"><li class="giveaway-card">
+            <img class="giveaway-cover" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" />
+            <div class="giveaway-card-top"><span class="giveaway-badge"></span><span class="giveaway-price">免费</span></div>
+            <h3></h3><p class="giveaway-condition"></p><p class="giveaway-deadline"></p>
+            <a class="giveaway-claim" target="_blank" rel="noopener noreferrer"></a>
+            <details class="giveaway-instructions"><summary>领取说明（来源原文）</summary><p></p></details>
+        </li></template>
+    </game-giveaways>
+</aside>
+
+<script>
+    import { beijingDate, gameState, normalizeDataset, visibleGames } from "../../utils/free-games.js";
+    import type { GamesSnapshot } from "../../utils/free-games-types";
+    const CACHE_KEY = "chuzun-free-games-v1";
+    const POLL = 5 * 60_000;
+    const platforms = ["epic", "steam"] as const;
+
+    class GameGiveaways extends HTMLElement {
+        private snapshot: GamesSnapshot = { version: 1 };
+        private life?: AbortController;
+        private timer?: ReturnType<typeof setInterval>;
+        private frame = 0;
+        private lastAttempt = 0;
+        private lastManual = 0;
+        private busy = false;
+        private failed = false;
+
+        connectedCallback() {
+            this.life = new AbortController();
+            this.frame = requestAnimationFrame(() => this.init());
+        }
+        disconnectedCallback() {
+            cancelAnimationFrame(this.frame);
+            clearInterval(this.timer);
+            this.life?.abort();
+            this.busy = false;
+        }
+        private merge(value: unknown) {
+            if (!value || typeof value !== "object" || (value as GamesSnapshot).version !== 1) return;
+            for (const platform of platforms) {
+                try {
+                    const dataset = normalizeDataset((value as GamesSnapshot)[platform], platform);
+                    if (!this.snapshot[platform] || Date.parse(dataset.fetchedAt) >= Date.parse(this.snapshot[platform]!.fetchedAt)) this.snapshot[platform] = dataset;
+                } catch { /* Preserve the source's last valid data and timestamp. */ }
+            }
+        }
+        private init() {
+            try { this.merge(JSON.parse(this.dataset.seed || "{}")); } catch { /* Recover from the live snapshot. */ }
+            try { this.merge(JSON.parse(localStorage.getItem(CACHE_KEY) || "{}")); } catch { /* Storage is optional. */ }
+            const media = matchMedia("(min-width: 1760px)");
+            const expand = () => { this.querySelector<HTMLDetailsElement>(".giveaway-shell")!.open = media.matches; };
+            expand();
+            media.addEventListener("change", expand, { signal: this.life!.signal });
+            this.querySelector(".giveaway-refresh")!.addEventListener("click", () => {
+                if (this.busy || Date.now() - this.lastManual < 60_000) return;
+                this.lastManual = Date.now();
+                void this.refresh();
+            }, { signal: this.life!.signal });
+            document.addEventListener("visibilitychange", () => {
+                if (!document.hidden) { this.render(); if (Date.now() - this.lastAttempt >= POLL) void this.refresh(); }
+            }, { signal: this.life!.signal });
+            this.render();
+            void this.refresh();
+            this.timer = setInterval(() => {
+                if (document.hidden) return;
+                this.render();
+                if (Date.now() - this.lastAttempt >= POLL) void this.refresh();
+            }, 30_000);
+        }
+        private async refresh() {
+            if (!this.life || this.life.signal.aborted || this.busy || document.hidden) return;
+            const lifecycle = this.life.signal;
+            this.lastAttempt = Date.now();
+            this.busy = true;
+            this.render();
+            try {
+                const url = new URL(this.dataset.snapshotUrl!, location.href);
+                if (url.origin !== location.origin) throw new Error("Invalid snapshot origin");
+                const response = await fetch(url, { cache: "no-store", credentials: "omit", signal: AbortSignal.any([lifecycle, AbortSignal.timeout(12_000)]) });
+                if (!response.ok) throw new Error("Snapshot request failed");
+                const data = await response.json();
+                if (data?.version !== 1 || !platforms.some(platform => data[platform])) throw new Error("Invalid snapshot");
+                let valid = false;
+                for (const platform of platforms) { try { normalizeDataset(data[platform], platform); valid = true; } catch { /* A source can fail independently. */ } }
+                if (!valid) throw new Error("No valid source");
+                if (lifecycle.aborted) return;
+                this.merge(data);
+                try { localStorage.setItem(CACHE_KEY, JSON.stringify(this.snapshot)); } catch { /* Keep the in-memory data. */ }
+                this.failed = false;
+            } catch {
+                if (lifecycle.aborted) return;
+                this.failed = true;
+            } finally {
+                if (!lifecycle.aborted) { this.busy = false; this.render(); }
+            }
+        }
+        private render() {
+            const now = Date.now();
+            for (const platform of platforms) {
+                const dataset = this.snapshot[platform];
+                const section = this.querySelector<HTMLElement>(`[data-platform="${platform}"]`)!;
+                const games = visibleGames(dataset, now);
+                const list = section.querySelector(".giveaway-list")!;
+                const template = this.querySelector<HTMLTemplateElement>(".giveaway-card-template")!;
+                for (const row of list.querySelectorAll<HTMLElement>("[data-game-id]")) if (!games.some(game => game.id === row.dataset.gameId)) row.remove();
+                games.forEach((game, index) => {
+                    let row = Array.from(list.querySelectorAll<HTMLElement>("[data-game-id]")).find(row => row.dataset.gameId === game.id);
+                    if (!row) { row = template.content.firstElementChild!.cloneNode(true) as HTMLElement; row.dataset.gameId = game.id; }
+                    if (list.children[index] !== row) list.insertBefore(row, list.children[index] || null);
+                    const state = gameState(game, dataset, now);
+                    const image = row.querySelector<HTMLImageElement>("img")!;
+                    image.hidden = !game.image;
+                    if (game.image && image.getAttribute("src") !== game.image) image.src = game.image;
+                    image.onerror = () => { image.hidden = true; };
+                    const badge = row.querySelector<HTMLElement>(".giveaway-badge")!;
+                    badge.textContent = state.label;
+                    badge.dataset.kind = state.kind;
+                    row.querySelector("h3")!.textContent = game.title;
+                    row.querySelector(".giveaway-condition")!.textContent = game.note;
+                    row.querySelector(".giveaway-deadline")!.textContent = state.kind === "upcoming" ? `开始 ${beijingDate(game.startAt)}` : game.endAt ? `截止 ${beijingDate(game.endAt)}` : "截止时间 / 剩余名额请查看活动页";
+                    const link = row.querySelector<HTMLAnchorElement>(".giveaway-claim")!;
+                    link.href = game.url;
+                    link.textContent = state.action;
+                    row.querySelector<HTMLElement>(".giveaway-instructions")!.hidden = !game.instructions;
+                    row.querySelector(".giveaway-instructions p")!.textContent = game.instructions;
+                });
+                section.querySelector("[data-count]")!.textContent = String(games.length);
+                section.querySelector<HTMLElement>("[data-empty]")!.hidden = games.length > 0;
+                const age = dataset ? now - Date.parse(dataset.fetchedAt) : Infinity;
+                section.querySelector("[data-source-status]")!.textContent = dataset ? `${age > 2 * 60 * 60_000 ? "缓存待更新 · " : "检查于 "}${beijingDate(dataset.fetchedAt)}` : "等待首次更新";
+            }
+            this.querySelector("[data-refresh-state]")!.textContent = this.busy ? "正在检查活动更新…" : this.failed ? "更新暂未完成 · 保留上次记录" : "每 5 分钟检查更新";
+            const button = this.querySelector<HTMLButtonElement>(".giveaway-refresh")!;
+            button.disabled = this.busy || now - this.lastManual < 60_000;
+            this.setAttribute("aria-busy", String(this.busy));
+        }
+    }
+    if (!customElements.get("game-giveaways")) customElements.define("game-giveaways", GameGiveaways);
+</script>
+
+<style>
+    .giveaway-rail { margin-bottom: 1rem; min-width: 0; }
+    game-giveaways { display: block; color: var(--text-color, #505968); font-size: 14px; line-height: 1.6; }
+    .giveaway-shell { background: var(--card-bg); border: 1px solid var(--line-divider); border-radius: var(--radius-large); overflow: hidden; }
+    .giveaway-heading { display: flex; align-items: center; gap: 10px; padding: 16px; cursor: pointer; list-style: none; }
+    .giveaway-heading::-webkit-details-marker { display: none; }
+    .giveaway-mark { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; background: var(--btn-regular-bg); color: var(--btn-content); }
+    .giveaway-mark svg { width: 23px; height: 23px; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .giveaway-heading-copy { display: flex; flex: 1; align-items: baseline; gap: 10px; }
+    .giveaway-heading strong { font-size: 17px; color: #293242; }
+    .giveaway-heading small { font-size: 12px; color: #798393; }
+    .giveaway-chevron { color: #9297a1; font-size: 21px; }
+    .giveaway-shell[open] .giveaway-chevron { transform: rotate(180deg); }
+    .giveaway-body { padding: 0 16px 16px; }
+    .giveaway-intro { margin: 0 0 16px; font-size: 13px; color: #768192; }
+    .giveaway-section + .giveaway-section { border-top: 1px solid var(--line-divider); padding-top: 18px; margin-top: 18px; }
+    .giveaway-section-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .giveaway-platform-icon { display: grid; place-items: center; width: 28px; height: 32px; flex-shrink: 0; background: #232b38; color: #fff; font-weight: 750; border-radius: 6px; }
+    [data-platform="steam"] .giveaway-platform-icon { background: #244e77; }
+    .giveaway-section-heading div { flex: 1; }
+    .giveaway-section-heading h2 { font-size: 15px; font-weight: 700; color: #354154; line-height: 1.4; }
+    .giveaway-section-heading p { color: #778393; font-size: 12px; margin-top: 3px; }
+    .giveaway-count { color: var(--btn-content); background: var(--btn-regular-bg); border-radius: 6px; font-size: 12px; padding: 0 6px; }
+    .giveaway-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
+    .giveaway-card { min-width: 0; overflow: hidden; }
+    .giveaway-card + .giveaway-card { padding-top: 14px; border-top: 1px dashed var(--line-divider); }
+    .giveaway-cover { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 9px; background: var(--btn-plain-bg-hover); margin-bottom: 9px; }
+    .giveaway-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .giveaway-badge { padding: 2px 6px; color: #287658; background: #e9f6ef; border-radius: 5px; font-size: 12px; font-weight: 600; }
+    .giveaway-badge[data-kind="upcoming"] { background: var(--btn-regular-bg); color: var(--btn-content); }
+    .giveaway-badge[data-kind="check"] { color: #8c6523; background: #fff3d9; }
+    .giveaway-price { color: #287658; font-weight: 700; font-size: 13px; }
+    .giveaway-card h3 { font-size: 16px; line-height: 1.45; font-weight: 700; color: #354154; overflow-wrap: anywhere; }
+    .giveaway-condition { font-size: 12px; color: #798393; margin-top: 5px; }
+    .giveaway-deadline { font-size: 13px; color: #566579; font-variant-numeric: tabular-nums; margin: 7px 0; }
+    .giveaway-claim { display: block; text-align: center; border-radius: 7px; background: var(--btn-regular-bg); color: var(--btn-content); padding: 7px 8px; font-size: 14px; font-weight: 600; }
+    .giveaway-claim:hover { filter: brightness(.96); }
+    .giveaway-instructions { margin-top: 7px; font-size: 12px; }
+    .giveaway-instructions summary { cursor: pointer; color: var(--btn-content); }
+    .giveaway-instructions p { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 5px; color: #788496; }
+    .giveaway-empty { padding: 14px 10px; background: var(--btn-plain-bg-hover); border-radius: 8px; font-size: 13px; color: #768192; }
+    .giveaway-source-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 5px; margin-top: 10px; font-size: 12px; color: #8490a0; }
+    .giveaway-source-row a, .giveaway-footer a { color: var(--btn-content); }
+    .giveaway-refresh-row { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 12px; color: #788496; padding-top: 14px; margin-top: 14px; border-top: 1px solid var(--line-divider); }
+    .giveaway-refresh { color: var(--btn-content); background: var(--btn-regular-bg); padding: 4px 8px; border-radius: 5px; }
+    .giveaway-refresh:disabled { opacity: .45; }
+    .giveaway-footer { font-size: 12px; color: #8490a0; line-height: 1.75; margin-top: 12px; }
+    .giveaway-footer p + p { margin-top: 7px; }
+    game-giveaways [hidden] { display: none !important; }
+    game-giveaways :is(a,button,summary):focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+    :global(.dark) game-giveaways { color: #c0c8d5; }
+    :global(.dark) .giveaway-heading strong, :global(.dark) .giveaway-section-heading h2, :global(.dark) .giveaway-card h3 { color: #e0e5ed; }
+    :global(.dark) .giveaway-deadline { color: #b6c2d1; }
+    :global(.dark) .giveaway-badge { background: #1a3d34; color: #9fdec2; }
+    :global(.dark) .giveaway-badge[data-kind="upcoming"] { background: var(--btn-regular-bg); color: var(--btn-content); }
+    :global(.dark) .giveaway-badge[data-kind="check"] { background: #4e3b1e; color: #f2d298; }
+    :global(.dark) .giveaway-price { color: #9fdec2; }
+    @media (min-width: 640px) and (max-width: 1759px) {
+        .giveaway-body { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; }
+        .giveaway-intro, .giveaway-footer, .giveaway-refresh-row { grid-column: 1 / -1; }
+        .giveaway-intro { margin-bottom: 0; }
+        .giveaway-section + .giveaway-section { margin: 0; padding: 0; border: 0; }
+    }
+    @media (min-width: 1760px) {
+        :global(#content-wrapper:has(.giveaway-rail)) { position: relative; }
+        :global(#swup-container:has(.giveaway-rail)) { overflow: visible; }
+        .giveaway-rail { position: absolute; top: 0; left: calc(100% + 16px); width: 260px; height: 100%; margin: 0; }
+        game-giveaways { position: sticky; top: 24px; max-height: calc(100dvh - 48px); overflow-y: auto; scrollbar-width: thin; }
+        .giveaway-heading-copy { display: grid; gap: 0; }
+    }
+</style>
